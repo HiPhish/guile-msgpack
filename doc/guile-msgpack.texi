@@ -1,0 +1,336 @@
+\input texinfo   @c -*-texinfo-*-
+@c %**start of header
+@documentencoding UTF-8
+@settitle MessagePack for GNU Guile
+@c %**end of header
+
+@copying
+Copyright @copyright{} 2018 Alejandro "HiPhish" Sanchez
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3
+or any later version published by the Free Software Foundation;
+with no Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.
+A copy of the license is included in the section entitled "GNU
+Free Documentation License".
+@end quotation
+@end copying
+
+@titlepage
+@title MessagePack for GNU Guile
+@author Alejandro "HiPhish" Sanchez
+
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top
+@top MessagePack
+
+MessagePack is a binary data serialization format.  This means that in-memory
+objects like numbers, string, dictionaries or ordered sequences can be
+serialized (``packed'') to raw bytes, and deserialized (``unpacked'') to
+in-memory objects. This library implements procedures to perform these two
+actions in GNU Guile.
+
+@menu
+* MessagePack Overview::  The MessagePack format in general
+* Guile API::             Using MessagePack in GNU Guile
+* GNU Free Documentation License::
+@end menu
+@end ifnottex
+
+
+@node MessagePack Overview
+@chapter MessagePack Overview
+
+From the @uref{https://msgpack.org/,MessagePack website}:
+
+@quotation
+MessagePack is an efficient binary serialization format. It lets you exchange
+data among multiple languages like JSON. But it's faster and smaller. Small
+integers are encoded into a single byte, and typical short strings require only
+one extra byte in addition to the strings themselves.
+@end quotation
+
+What this means is that we can turn in-memory objects of a process (such as a
+Guile REPL instance) into raw bytes, and turn raw bytes into in-memory objects
+again. These actions are referred to as ``packing'' and ``unpacking''
+respectively, although the technical terms are ``serialization'' and
+``deserialization''. Since the format is standardised we can use it to exchange
+data between processes written in different programming languages running on
+different architectures without issue.
+
+MessagePack is focused on optimising speed and size, hence why it uses a binary
+format instead of a text-based one. Serialization formats like JSON and YAML
+are easy to read and manually edit by humans, but parsing them is a non-trivial
+task. Human-readability is not always a priority: for instance, if we want to
+exchange data between two processes for remote procedure calls, that data will
+never be read by a human.
+
+
+@node Guile API
+@chapter Guile API
+
+All of the API is exposed via the @code{(msgpack)} module, which only serves to
+re-export the binding from the more specific sub-modules. We can divide the
+library into three tasks: packing data, unpacking data, and the auxiliary data
+types provided for dealing with MessagePack data. The following sections
+discuss these tasks and the associated modules.
+
+@menu
+* MessagePack types::  New types added to Guile
+* Packing::            Serializing Guile objects
+* Unpacking::          Deserializing MessagePack objects
+@end menu
+
+
+@node MessagePack types
+@section MessagePack types
+
+The MessagePack specification@footnote{
+@uref{https://github.com/msgpack/msgpack/blob/master/spec.md}}
+specifies which types the format supports. Most of these neatly map onto the
+types provided by Guile out of the box, but there are two exceptions: the
+@code{nil} object (nothingness) and the @code{ext} type (extensions to
+MessagePack).
+
+
+@subsection Nothingness
+
+MessagePack indicates ``nothingness'' using the @code{nil} object. Guile lacks
+an appropriate unambiguous object for this purpose; the usual @code{'()} could
+be confused for a list with no contents, and @code{#f} is part of the boolean
+type in MessagePack. For this purpose a new @code{nothing} object has been
+introduced by this library.
+
+The following bindings reside in the @code{(msgpack nothing)} module.
+
+@deffn {Scheme procedure} nothing
+Returns the @code{nothing} object. All calls to this function produce results
+which are @code{eq?} to each other, meaning that this procedure returns a
+singleton object.
+
+@example
+(define val1 (nothing))
+(define val2 (nothing))
+
+;; This always evaluates to '#t':
+(eq? val1 val2)
+@end example
+@end deffn
+
+@deffn {Scheme procedure} nothing? object
+Predicate for the @code{nothing} object, returns @code{#t} if @code{object} is
+the @code{nothing} object, and @code{#f} otherwise.
+@end deffn
+
+
+@subsection Extension types
+
+MessagePack allows for custom types to be defined via the @code{ext} type. An
+extension is a tagged byte sequence: the tag is a signed 8-bit integer and the
+data is an ordered sequence of bytes. Non-negative tag values are free to be
+used for any purpose, but negative tag values are reserved for future extension
+by MessagePack.
+
+The following bindings reside in the @code{(msgpack ext)} module.
+
+@deffn {Scheme procedure} make-ext type data
+Produce a new instance of the @code{ext} record type. The @code{type} must be
+an exact real integer in the range -128--127, and the @code{data} must be a
+bytevector of less than @math{2^32} bytes (4GiB) in length.
+@end deffn
+
+@deffn {Scheme procedure} ext? object
+Type predicate for @code{ext} objects. Returns @code{#t} if @code{object} is
+an instance of @code{ext}, and @code{#f} otherwise.
+@end deffn
+
+@deffn {Scheme procedure} ext-type ext
+Accessor for the @code{type} field of an @code{ext} object.
+@end deffn
+
+@deffn {Scheme procedure} ext-data ext
+Accessor for the @code{data} field of an @code{ext} object.
+@end deffn
+
+Let us assume that you wish to pack exact rational numbers by preserving their
+exactness. By default such a number would first need to be converted to an
+inexact real number which would then be packed as a floating-point number.
+This is unacceptable if exactness is to be preserved, so we will define a new
+type. Suppose this extension type uses the tag number 13.
+
+@example
+(define (rational->ext x)
+  (make-ext 13
+            (pack (vector (numerator   x)
+                          (denominator x)))))
+@end example
+
+We use MessagePack to pack a vector of both the numerator and denominator as a
+bytevector and store that bytevector as the data of our object. This in turn
+makes it easy to convert the extension object back to a rational number:
+
+@example
+(define (ext13->rational e)
+  ;; The data gets unpacked as a vector of two numbers
+  (define numbers (unpack (ext-data e)))
+  ;; The result is the quotient of those two numbers
+  (/ (vector-ref numbers 0)
+     (vector-ref numbers 1)))
+@end example
+
+
+@node Packing
+@section Packing
+
+The following bindings reside in the @code{(msgpack pack)} module. The Scheme
+types map onto MessagePack types as follows:
+
+@itemize @bullet
+@item A @code{nothing} gets packed as @code{nil}
+
+@item Both @code{#t} and @code{#f} get packed as boolean values
+
+@item Real exact integers get packed as integers
+
+@item Real numbers (including rationals) get packed as floating-point numbers,
+the precision depends on the @code{float-precision} parameter
+
+@item Strings get packed a text strings
+
+@item Symbols get converted to strings and are then packed
+
+@item Bytevectors get packed as binary strings
+
+@item Vectors get packed as arrays
+
+@item Hash tables get packed maps
+
+@item Extension objects get packed as @code{ext} objecs
+@end itemize
+
+If there is more than one possibility the first one applicable in the above
+order is used. You can add your own rules using the @code{packing-table}
+parameter.
+
+@deffn {Scheme procedure} pack! datum out
+Pack the @code{datum} into the open binary output port @code{out}. If there are
+multiple ways of packing @code{datum} the smallest possible format will be
+preferred. If the datum is a collection the packing procedure is called
+recursively.
+
+
+If @code{datum} cannot be packed an exception will be raised. If @code{datum}
+can only be packed partially (for example if a vector contains an unpackable
+object) an exception will be raised as well, but bytes might already have been
+written to @code{out}.
+@end deffn
+
+@deffn {Scheme procedure} pack [datum ...]
+Similar to @code{pack!}, but instead of writing to a port return a bytevector
+of the packed objects.
+@end deffn
+
+@deffn {Scheme parameter} packing-table
+An association list of predicate-procedure pairs. When packing the predicate of
+each entry (in order) is applied to @code{datum} and if one of them returns
+true its corresponding procedure is applied to @code{datum} and @code{out} to
+pack @code{datum}. The @code{pack!} and @code{pack} procedures exit after the
+first successfully matching predicate.
+
+Note that the procedure must always write the data to the output port that is
+the second argument, even if you want to use @code{pack} rather than
+@code{pack!}.  If you wish to call @code{pack} inside a packing procedure use
+@code{pack!} instead.
+
+This table is mainly useful for defining packing procedures for your own data
+types. For example, if you wanted to pack @code{'()} as MessagePack's
+@code{nil} rather than an empty list, you could write the following:
+
+@example
+(define (pack-null datum out)
+  (pack! (nothing) out))
+
+(parameterize (packing-table (cons (cons null? pack-null)
+                                   (packing-table))
+  (pack '()))
+@end example
+
+Since the packing table is consulted in order, our new prepended entry will be
+checked first before checking the remaining entries.
+@end deffn
+
+@deffn {Scheme parameter} float-precision
+Either @code{'single} or @code{'double}, specifies the precision to use for
+packing floating-point numbers. Defaults to double precision.
+@end deffn
+
+
+@node Unpacking
+@section Unpacking
+
+The following bindings reside in the @code{(msgpack unpack)} module. The
+MessagePack types map onto Scheme types as follows:
+
+@itemize @bullet
+@item The @code{nil} object gets unpacked to an instance of @code{nothing}
+
+@item Boolean objects get unpacked to @code{#t} or @code{#f}
+
+@item Integers get unpacked to exact real integer numbers
+
+@item Floating point numbers get unpacked to inexact real numbers
+
+@item Strings get unpacked to strings
+
+@item Binary strings get unpacked to bytevectors
+
+@item Arrays get unpacked to vectors
+
+@item Maps get unpacked to hash tables using @code{equal?} for key comparison
+
+@item Extension objects get unpacked to @code{ext} objects
+@end itemize
+
+I tried to chose mappings which preserve semantic meaning and use existing data
+types, but of course no such mapping is perfect. If you disagree, I recommend
+wrapping the @code{unpack!} and @code{unpack} procedures like this:
+
+@example
+;; Unpack 'nil' as an empty list ('bytes' is some bytevector of packed data)
+(let ((datum (unpack bytes)))
+  (cond
+    ((nothing? datum) '())
+    (else datum)))
+@end example
+
+This wrapping can also be used to map @code{ext} objects onto whatever they are
+meant to actually represent in your application.
+
+@deffn {Scheme procedure} unpack! in
+Unpacks a single datum from the open binary input port @code{in} and returns
+the unpacked object. If the object is a collection the unpacking procedure is
+called recursively.
+@end deffn
+
+@deffn {Scheme procedure} unpack bytes
+Unpacks a single datum from the bytevector @code{bytes} and returns the
+unpacked object. If the object is a collection the unpacking procedure is
+called recursively.
+@end deffn
+
+
+@node GNU Free Documentation License
+@appendix GNU Free Documentation License
+
+@include fdl-1.3.texi
+
+@bye
+

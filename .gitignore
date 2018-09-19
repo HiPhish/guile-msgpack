@@ -1,0 +1,2 @@
+*.log   # Log files created by tests
+build/  # Build output
