@@ -105,5 +105,6 @@ If you like this library please consider financially supporting its
 development, every small amount helps. Feel free to explore my other software
 projects as well.
 
-http://hiphish.github.io/
-https://liberapay.com/HiPhish/
+* http://hiphish.github.io/
+
+* https://liberapay.com/HiPhish/
