@@ -33,6 +33,7 @@
                         make-bytevector
                         bytevector-length
                         bytevector-u8-set!
+                        bytevector-s8-set!
                         bytevector-sint-set!
                         bytevector-uint-set!
                         bytevector-ieee-single-set!
@@ -179,7 +180,7 @@
       (put-bytevector out bv)))
   ;; The 'type' is an 8bit signed integer, so we need this round trip first
   (let ((bv (make-bytevector 1)))
-    (bytevector-sint-set! bv 0 type)
+    (bytevector-s8-set! bv 0 type)
     (put-bytevector out bv))
   (put-bytevector out data))
 
@@ -201,22 +202,27 @@
         (,ext?        . ,pack-ext)))))
 
 ;; ----------------------------------------------------------------------------
-(define (pack-to out datum)
-  "- Scheme procedure: pack-to out datum
-     Write the object DATUM in serialised form to the binary output port OUT.
+(define (pack-to out . data)
+  "- Scheme procedure: pack-to out [datum ...]
+     Write each of the DATUM objects in serialised form to the binary output
+     port OUT.
      
      DATUM must be an object of a type which can be serialised as a MessagePack
      object."
-  (do ((table (packing-table) (cdr table))
-       (success? #f))
-      ((or success? (null? table))
-       (unless success?
-         (throw 'unpackable datum)))
-    (let ((pred (car (car table)))
-          (proc (cdr (car table))))
-      (when (pred datum)
-        (proc out datum)
-        (set! success? #t)))))
+  (define (pack-datum datum)
+    (do ((table (packing-table) (cdr table))
+         (success? #f))
+        ((or success? (null? table))
+         (unless success?
+           (throw 'unpackable datum)))
+      (let ((pred (car (car table)))
+            (proc (cdr (car table))))
+        (when (pred datum)
+          (proc out datum)
+          (set! success? #t)))))
+  (do ((rest data (cdr rest)))
+      ((null? rest))
+    (pack-datum (car rest))))
 
 (define (pack . data)
   "- Scheme procedure: pack [datum ...]
@@ -226,7 +232,5 @@
      MessagePack object."
   (call-with-values (λ () (open-bytevector-output-port))
     (λ (out get-bv)
-      (do ((rest data (cdr rest)))
-          ((null? rest)
-           (get-bv))
-        (pack-to out (car rest))))))
+      (apply pack-to (cons out data))
+      (get-bv))))

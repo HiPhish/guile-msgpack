@@ -220,16 +220,16 @@ If there is more than one possibility the first one applicable in the above
 order is used. You can add your own rules using the @code{packing-table}
 parameter.
 
-@deffn {Scheme procedure} pack-to out datum
-Pack the @code{datum} into the open binary output port @code{out}. If there are
-multiple ways of packing @code{datum} the smallest possible format will be
-preferred. If the datum is a collection the packing procedure is called
+@deffn {Scheme procedure} pack-to out [datum ...]
+Pack each @code{datum} into the open binary output port @code{out}. If there
+are multiple ways of packing a @code{datum} the smallest possible format will
+be preferred. If the datum is a collection the packing procedure is called
 recursively.
 
-If @code{datum} cannot be packed an exception will be raised. If @code{datum}
-can only be packed partially (for example if a vector contains an unpackable
-object) an exception will be raised as well, but bytes might already have been
-written to @code{out}.
+If a @code{datum} cannot be packed an exception will be raised. If the
+@code{datum} can only be packed partially (for example if a vector contains an
+unpackable object) an exception will be raised as well, but bytes might already
+have been written to @code{out}.
 @end deffn
 
 @deffn {Scheme procedure} pack [datum ...]
