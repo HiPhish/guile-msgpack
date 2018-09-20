@@ -18,7 +18,7 @@
 ;;; along with msgpack-guile.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (msgpack unpack)
-  #:export (unpack! unpack))
+  #:export (unpack-from unpack))
 
 (use-modules ((msgpack nothing)
               #:select (nothing))
@@ -39,8 +39,8 @@
               #:select (make-ext)))
 
 ;; ----------------------------------------------------------------------------
-(define (unpack! in)
-  "- Scheme Procedure: unpack! in
+(define (unpack-from in)
+  "- Scheme Procedure: unpack-from in
      Unpack (de-serialise) a value from the open binary input port IN."
   (define tag (get-u8 in))
   ;; TODO  Handle EOF
@@ -87,7 +87,7 @@
   "- Scheme Procedure: unpack bytes
      Unpack (de-serialise) a value from the bytevector BYTES."
   (let ((in (open-bytevector-input-port bytes)))
-     (unpack! in)))
+     (unpack-from in)))
 
 
 ;; ----------------------------------------------------------------------------
@@ -118,7 +118,7 @@
        (i 0 (1+ i)))
       ((= i size)
        hash)
-    (hash-set! hash (unpack! in) (unpack! in))))
+    (hash-set! hash (unpack-from in) (unpack-from in))))
 
 (define (unpack-array size in)
   "- Scheme Procedure: unpack-array size in
@@ -128,7 +128,7 @@
        (i 0 (1+ i)))
       ((= i size)
        array)
-    (vector-set! array i (unpack! in))))
+    (vector-set! array i (unpack-from in))))
 
 
 (define (unpack-string size in)

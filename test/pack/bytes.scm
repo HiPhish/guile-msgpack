@@ -21,6 +21,7 @@
              ((rnrs bytevectors) #:select (make-bytevector))
              (test pack utility test-cases))
 
+
 (test-begin "Binary strings")
 (test-cases "8-bit binary strings"
   ((make-bytevector 0 #x01) (#xC4 #x00))

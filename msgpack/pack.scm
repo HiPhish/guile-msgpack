@@ -18,7 +18,7 @@
 ;;; along with msgpack-guile.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (msgpack pack)
-  #:export (pack pack! packing-table float-precision))
+  #:export (pack-to pack packing-table float-precision))
 
 (use-modules ((msgpack nothing)
               #:select (nothing?))
@@ -46,13 +46,13 @@
 (define float-precision (make-parameter 'double))
 
 ;; ----------------------------------------------------------------------------
-(define (pack-nothing datum out)
+(define (pack-nothing out datum)
   (put-u8 out #xC0))
 
-(define (pack-bool value out)
+(define (pack-bool out value)
   (put-u8 out (if value #xC3 #xC2)))
 
-(define (pack-int int out)
+(define (pack-int out int)
   (define (write-int signed? size tag)
     (define bv (make-bytevector (+ size 1)))
     (bytevector-u8-set! bv 0 tag)
@@ -75,7 +75,7 @@
       ((<= (- (expt 2 63)) int) (write-int #t 8 #xD3))
       (else (throw 'integer-underflow int)))))
 
-(define (pack-float float out)
+(define (pack-float out float)
   (define-values (size tag proc)
     (cond
       ((eq? (float-precision) 'single) (values 4 #xCA bytevector-ieee-single-set!))
@@ -86,7 +86,7 @@
   (proc bv 1 float (endianness big))
   (put-bytevector out bv))
 
-(define (pack-string string out)
+(define (pack-string out string)
   (define size (string-utf8-length string))
   (define bv   (string->utf8 string))
   (define-values (size-field-length tag)
@@ -103,10 +103,10 @@
       (put-bytevector out size-field)))
   (put-bytevector out bv))
 
-(define (pack-symbol sym out)
-  (pack-string (symbol->string sym) out))
+(define (pack-symbol out sym)
+  (pack-string out (symbol->string sym)))
 
-(define (pack-bin bin out)
+(define (pack-bin out bin)
   (define size (bytevector-length bin))
   (define-values (tag size-length)
     (cond
@@ -120,7 +120,7 @@
   (put-bytevector out  bv)
   (put-bytevector out bin))
 
-(define (pack-vector v out)
+(define (pack-vector out v)
   (define size (vector-length v))
   (define tag
     (cond
@@ -136,12 +136,12 @@
       (put-bytevector out bv)))
   (do ((i 0 (1+ i)))
       ((= i size))
-    (pack! (vector-ref v i) out)))
+    (pack-to out (vector-ref v i))))
 
-(define (pack-hash-table table out)
-  (define (pack-entry! key value)
-    (pack! key out)
-    (pack! value out))
+(define (pack-hash-table out table)
+  (define (pack-entry key value)
+    (pack-to out key)
+    (pack-to out value))
   (define size (hash-count (const #t) table))
   (define tag
     (cond
@@ -155,9 +155,9 @@
            (bv (make-bytevector nbytes)))
       (bytevector-uint-set! bv 0 size (endianness big) nbytes)
       (put-bytevector out bv)))
-  (hash-for-each pack-entry! table))
+  (hash-for-each pack-entry table))
 
-(define (pack-ext e out)
+(define (pack-ext out e)
   (define type (ext-type e))
   (define data (ext-data e))
   (define size (bytevector-length data))
@@ -201,8 +201,8 @@
         (,ext?        . ,pack-ext)))))
 
 ;; ----------------------------------------------------------------------------
-(define (pack! datum out)
-  "- Scheme procedure: pack! datum out
+(define (pack-to out datum)
+  "- Scheme procedure: pack-to out datum
      Write the object DATUM in serialised form to the binary output port OUT.
      
      DATUM must be an object of a type which can be serialised as a MessagePack
@@ -215,7 +215,7 @@
     (let ((pred (car (car table)))
           (proc (cdr (car table))))
       (when (pred datum)
-        (proc datum out)
+        (proc out datum)
         (set! success? #t)))))
 
 (define (pack . data)
@@ -229,4 +229,4 @@
       (do ((rest data (cdr rest)))
           ((null? rest)
            (get-bv))
-        (pack! (car rest) out)))))
+        (pack-to out (car rest))))))

@@ -22,7 +22,7 @@
   #:use-module (msgpack unpack)
   #:use-module (msgpack ext)
   #:use-module (msgpack nothing)
-  #:re-export (pack! pack float-precision packing-table
-               unpack! unpack
+  #:re-export (pack-to pack float-precision packing-table
+               unpack-from unpack
                nothing? nothing
                ext? make-ext ext-type ext-data))

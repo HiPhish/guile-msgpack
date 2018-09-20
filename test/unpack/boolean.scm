@@ -20,6 +20,7 @@
 (use-modules (msgpack unpack)
              (srfi srfi-64))
 
+
 (test-begin "Booleans")
 (let ((val1 (unpack #vu8(#xC2)))
       (val2 (unpack #vu8(#xC3))))

@@ -20,6 +20,7 @@
 (use-modules (msgpack pack)
              (test pack utility test-cases))
 
+
 (test-cases "Boolean"
   (#t (#xC3))
   (#f (#xC2)))

@@ -67,7 +67,7 @@ unpack one from a binary output port.
 
 .. code:: scheme
 
-   (use-modules ((msgpack) #:select (pack unpack pack! unpack!)))
+   (use-modules ((msgpack) #:select (pack unpack pack-to unpack-from)))
 
    ;; Some object to pack
    (define hodgepodge (vector 1 2 '#(3 #t) "foo"))
@@ -79,8 +79,8 @@ unpack one from a binary output port.
    ;; Returns '#(1 2 #(3 #t) "foo")
 
    ;; We can also pack and unpack directly to and from a port
-   (pack! hodgepodge (current-output-port))
-   (unpack! (current-input-port))
+   (pack-to (current-output-port) hodgepodge)
+   (unpack-from (current-input-port))
 
 In the above code we have two variants of `pack` and `unpack`: a pure one and
 an impure one with an exclamation mark suffix. The pure variant performs the
