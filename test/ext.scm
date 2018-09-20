@@ -26,7 +26,7 @@
   (syntax-rules ()
     ((_ type (byte ...))
      (let* ((data (u8-list->bytevector '(byte ...)))
-            (e (make-ext type data)))
+            (e (ext type data)))
        (test-assert (ext? e))
        (test-assert (= (ext-type e) type))
        (test-assert (bytevector=? (ext-data e) data))))))

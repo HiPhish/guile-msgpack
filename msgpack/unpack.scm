@@ -36,7 +36,7 @@
                         bytevector-ieee-double-ref
                         endianness))
              ((msgpack ext)
-              #:select (make-ext)))
+              #:select (ext)))
 
 ;; ----------------------------------------------------------------------------
 (define (unpack-from in)
@@ -154,4 +154,4 @@
      input port ‘in’."
   (define type (get-u8 in))
   (define data (get-bytevector-n in size))
-  (make-ext type data))
+  (ext type data))

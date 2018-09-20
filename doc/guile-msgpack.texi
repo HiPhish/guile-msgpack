@@ -141,7 +141,7 @@ by MessagePack.
 
 The following bindings reside in the @code{(msgpack ext)} module.
 
-@deffn {Scheme procedure} make-ext type data
+@deffn {Scheme procedure} ext type data
 Produce a new instance of the @code{ext} record type. The @code{type} must be
 an exact real integer in the range -128--127, and the @code{data} must be a
 bytevector of less than @math{2^32} bytes (4GiB) in length.
@@ -168,9 +168,9 @@ type. Suppose this extension type uses the tag number 13.
 
 @example
 (define (rational->ext x)
-  (make-ext 13
-            (pack (vector (numerator   x)
-                          (denominator x)))))
+  (ext 13
+       (pack (vector (numerator   x)
+                     (denominator x)))))
 @end example
 
 We use MessagePack to pack a vector of both the numerator and denominator as a

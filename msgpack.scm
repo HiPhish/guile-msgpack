@@ -25,4 +25,4 @@
   #:re-export (pack-to pack float-precision packing-table
                unpack-from unpack
                nothing? nothing
-               ext? make-ext ext-type ext-data))
+               ext? ext ext-type ext-data))
