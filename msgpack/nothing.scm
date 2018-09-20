@@ -33,7 +33,13 @@
 
 (define nothing
   (let ((the-nothing ((record-constructor <nothing>))))
-    (λ () the-nothing)))
+    (λ ()
+      "- Scheme Procedure: nothing
+     Returns the singleton instance of the MessagePack nothingness object."
+      the-nothing)))
 
 (define (nothing? object)
+  "- Scheme Procedure: nothing? object
+     Return `#t' if OBJECT is 'eq?' to the MessagePack nothingness object,
+     else return `#f'."
   (eq? object (nothing)))
