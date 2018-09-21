@@ -32,6 +32,7 @@
              ((rnrs bytevectors)
               #:select (bytevector-uint-ref
                         bytevector-sint-ref
+                        utf8->string
                         bytevector-ieee-single-ref
                         bytevector-ieee-double-ref
                         endianness))
@@ -129,38 +130,39 @@
   "- Scheme Procedure: unpack-map size in
      Unpack a hash table of size ‘size’ from binary input port ‘in’, using
      ‘equal?’ for key equality."
-  ;; TODO  Handle EOF
-  (do ((hash (make-hash-table size))
-       (i 0 (1+ i)))
-      ((= i size)
-       hash)
-    (hash-set! hash (unpack-from in) (unpack-from in))))
+  (catch 'empty-port
+    (λ ()
+      (do ((hash (make-hash-table size))
+           (i 0 (1+ i)))
+          ((= i size)
+           hash)
+        (hash-set! hash (unpack-from in) (unpack-from in))))
+    (λ (key . args)
+      (throw 'unexpected-eof))))
 
 (define (unpack-array size in)
   "- Scheme Procedure: unpack-array size in
      Unpack a vector of size ‘size’ from binary input port ‘in’."
-  ;; TODO  Handle EOF
-  (do ((array (make-vector size))
-       (i 0 (1+ i)))
-      ((= i size)
-       array)
-    (vector-set! array i (unpack-from in))))
+  (catch 'empty-port
+    (λ ()
+      (do ((array (make-vector size))
+           (i 0 (1+ i)))
+          ((= i size)
+           array)
+        (vector-set! array i (unpack-from in))))
+    (λ (key . args)
+      (throw 'unexpected-eof))))
 
 
 (define (unpack-string size in)
   "- Scheme Procedure: unpack-string size in
      Unpack a UTF-8 string of length ‘size’ from binary input port ‘in’."
-  ;; TODO  Handle EOF
   (define bytes (get-bytevector-n in size))
-  ;; TODO  Handle decoding failure
-  ;; TODO  Consider utf8->string procedure: *Note Interpreting Bytevector
-  ;; Contents as Unicode Strings::
-  (bytevector->string bytes "UTF-8"))
+  (utf8->string bytes))
 
 (define (unpack-bytes size in)
   "- Scheme Procedure: unpack-bytes size in
      Unpack a bytevector of length ‘size’ from binary input port ‘in’."
-  ;; TODO  Handle EOF
   (define bytes (get-bytevector-n in size))
   bytes)
 

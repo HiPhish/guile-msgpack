@@ -319,13 +319,21 @@ the unpacked object. If the object is a collection this  procedure is called
 recursively.
 
 If the port is empty, meaning that not a single byte could be read, an
-exception of the @code{'empty-port} will be thrown.
+exception of the @code{empty-port} will be thrown.
+
+If an object could not be read fully an exception will be raised. Either
+@code{unexpected-eof} if an entire object is missing from a collection (such as
+an array) or another exception if an object could only be read partially.
 @end deffn
 
 @deffn {Scheme procedure} unpack bytes
 Unpacks a all data from the bytevector @code{bytes} and returns the
 unpacked objects (@pxref{Binding Multiple Values,,,guile}). If @code{bytes} is
 empty, no objects will be returned.
+
+The exceptions raised are the same as for @code{unpack-from}, except that
+@code{empty-port} is never thrown; if the port is empty nothing will get
+returned, but it is not an error.
 
 @example
 ;; This bytevector has three objects packed in it
