@@ -24,6 +24,8 @@
               #:select (nothing?))
              ((msgpack ext)
               #:select (ext? ext-type ext-data))
+             ((ice-9 match)
+              #:select (match))
              ((ice-9 binary-ports)
               #:select (open-bytevector-output-port
                         put-u8
@@ -44,7 +46,12 @@
 
 ;; ----------------------------------------------------------------------------
 ;; Used for packing float
-(define float-precision (make-parameter 'double))
+(define float-precision
+  (make-parameter 'double
+    (λ (v)
+      (match v
+        ((or 'single 'double) v)
+        (_ (throw 'wrong-type-arg "Must be either 'single or 'double"))))))
 
 ;; ----------------------------------------------------------------------------
 (define (pack-nothing out datum)
@@ -78,10 +85,9 @@
 
 (define (pack-float out float)
   (define-values (size tag proc)
-    (cond
-      ((eq? (float-precision) 'single) (values 4 #xCA bytevector-ieee-single-set!))
-      ((eq? (float-precision) 'double) (values 8 #xCB bytevector-ieee-double-set!))
-      (else (error "Unknow float-precision parameter value"))))
+    (match (float-precision)
+      ('single (values 4 #xCA bytevector-ieee-single-set!))
+      ('double (values 8 #xCB bytevector-ieee-double-set!))))
   (define bv (make-bytevector (1+ size)))
   (bytevector-u8-set! bv 0 tag)
   (proc bv 1 float (endianness big))

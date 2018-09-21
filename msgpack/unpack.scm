@@ -27,6 +27,8 @@
                         get-bytevector-n))
              ((ice-9 iconv)
               #:select (bytevector->string))
+             ((ice-9 match)
+              #:select (match))
              ((rnrs io ports)
               #:select (open-bytevector-input-port))
              ((rnrs bytevectors)
@@ -55,7 +57,7 @@
     ((<= #x90 tag #x9F) (unpack-array  (logand tag #b00001111) in))
     ((<= #xA0 tag #xBF) (unpack-string (logand tag #b00011111) in))
     ((= tag #xC0) (nothing))
-    ((= tag #xC1) (error "Byte 0xC1 is not a valid MessagePack tag"))
+    ((= tag #xC1) (throw 'unpackable "#xC1 cannot be unpacked"))
     ((= tag #xC2) #f)
     ((= tag #xC3) #t)
     ((= tag #xC4) (unpack-bytes (unpack-integer 1 #f in) in))
@@ -119,12 +121,10 @@
   "- Scheme Procedure: unpack-float precision in
      Unpack a ‘precision’ floating-point number from binary input port ‘in’."
   (define in-bytes (get-bytevector-n in (if (eq? precision 'single) 4 8)))
-  (cond
-    ((eq? precision 'single)
-     (bytevector-ieee-single-ref in-bytes 0 (endianness big)))
-    ((eq? precision 'double)
-     (bytevector-ieee-double-ref in-bytes 0 (endianness big)))
-    (else (error "Only single- or double precision floating point allowed."))))
+  (match precision
+    ('single (bytevector-ieee-single-ref in-bytes 0 (endianness big)))
+    ('double (bytevector-ieee-double-ref in-bytes 0 (endianness big)))
+    (_ (throw 'wrong-type-arg "Either 'single or 'double" precision))))
 
 (define (unpack-map size in)
   "- Scheme Procedure: unpack-map size in
