@@ -41,9 +41,13 @@
 ;; ----------------------------------------------------------------------------
 (define (unpack-from in)
   "- Scheme Procedure: unpack-from in
-     Unpack (de-serialise) a value from the open binary input port IN."
+     Unpack (de-serialise) one value from the open binary input port IN.
+     
+     If the port is empty (not a single byte could be read) an 'empty-port
+     exception will be raised."
   (define tag (get-u8 in))
-  ;; TODO  Handle EOF
+  (when (eof-object? tag)
+    (throw 'empty-port))
   (cond
     ((<= tag #x7F) tag)
     ((<= #x80 tag #x8F) (unpack-map    (logand tag #b00001111) in))
@@ -85,9 +89,21 @@
 
 (define (unpack bytes)
   "- Scheme Procedure: unpack bytes
-     Unpack (de-serialise) a value from the bytevector BYTES."
-  (let ((in (open-bytevector-input-port bytes)))
-     (unpack-from in)))
+     Unpack (de-serialise) all values from the bytevector BYTES.
+     
+     This procedure returns as many values as there are objects packed in
+     BYTES. If BYTES is empty, no values will be returned."
+  (let ((in (open-bytevector-input-port bytes))
+        (objs '()))
+    ;; Keep unpacking values from the bytes "forever" and accumulate results in
+    ;; a list; eventually an EOF exception will be thrown because we ran out of
+    ;; bytes.
+    (catch 'empty-port
+      (λ ()
+        (while #t
+          (set! objs (cons (unpack-from in) objs))))
+      (λ (key . args)
+        (apply values (reverse! objs))))))
 
 
 ;; ----------------------------------------------------------------------------

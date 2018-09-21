@@ -315,14 +315,29 @@ meant to actually represent in your application.
 
 @deffn {Scheme procedure} unpack-from in
 Unpacks a single datum from the open binary input port @code{in} and returns
-the unpacked object. If the object is a collection the unpacking procedure is
-called recursively.
+the unpacked object. If the object is a collection this  procedure is called
+recursively.
+
+If the port is empty, meaning that not a single byte could be read, an
+exception of the @code{'empty-port} will be thrown.
 @end deffn
 
 @deffn {Scheme procedure} unpack bytes
-Unpacks a single datum from the bytevector @code{bytes} and returns the
-unpacked object. If the object is a collection the unpacking procedure is
-called recursively.
+Unpacks a all data from the bytevector @code{bytes} and returns the
+unpacked objects (@pxref{Binding Multiple Values,,,guile}). If @code{bytes} is
+empty, no objects will be returned.
+
+@example
+;; This bytevector has three objects packed in it
+(define bv #vu8(#x01 #x02 #xA5 #x68 #x65 #x6C #x6C #x6F))
+
+;; Bind the first value only
+(define one (unpack bv))
+;; Bind all values (requires knowing how many there are)
+(define-values (one two hello) (unpack bv))
+;; Bind all values to a list (works with any amount)
+(define-values objects (unpack bv))
+@end example
 @end deffn
 
 
