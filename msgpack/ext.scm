@@ -19,7 +19,7 @@
 
 (define-module (msgpack ext)
   #:use-module ((rnrs bytevectors)
-                #:select (bytevector?))
+                #:select (bytevector? bytevector-length))
   #:use-module ((srfi srfi-9)
                 #:select (define-record-type))
   #:use-module ((srfi srfi-9 gnu)
@@ -41,6 +41,8 @@
     (throw 'wrong-type-arg "Type must be signed 8-bit integer"))
   (unless (bytevector? data)
     (throw 'wrong-type-arg "Data must be bytevector"))
+  (unless (< (bytevector-length data) (expt 2 32))
+    (throw 'out-of-range "Data sequence must be < 2^32 bytes long"))
   ((record-constructor <ext>) type data))
 
 (define (ext? ext)
