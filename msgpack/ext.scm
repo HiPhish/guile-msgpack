@@ -19,7 +19,7 @@
 
 (define-module (msgpack ext)
   #:use-module ((rnrs bytevectors)
-                #:select (bytevector? bytevector-length bytevector-uint-ref endianness))
+                #:select (make-bytevector bytevector? bytevector-length bytevector-uint-set! bytevector-uint-ref endianness))
   #:use-module ((srfi srfi-9)
                 #:select (define-record-type))
   #:use-module ((srfi srfi-9 gnu)
@@ -80,7 +80,7 @@
      defined by the MessagePack specification."
   (define type (ext-type ext))
   (define data (ext-data ext))
-  (define (data->times ns-byte s-bytes)
+  (define (data->times ns-bytes s-bytes)
     "Disassemble the data into nanoseconds and seconds"
     (values (bytevector-uint-ref data        0 (endianness big) ns-bytes)
             (bytevector-uint-ref data ns-bytes (endianness big)  s-bytes)))
@@ -94,3 +94,29 @@
                   (96 (data->times 32 64))
                   (_ (throw 'wrong-type-arg "Invalid data for timestamp")))))
     (make-time time-utc nanoseconds seconds)))
+
+(define (time->ext time)
+  "- Scheme Procedure: time->ext time
+     Return a MessagePack extension object of type -1 generated from the
+     contents of the SRFI-19 time object TIME.
+     
+     As per MessagePack specifications, the number of nanoseconds may not be
+     larger than an unsigned 32-bit integer, and the number of seconds may not
+     be larger than a 64-bit unsigned integer."
+  (define nanoseconds (time nanoseconds time))
+  (define     seconds (time     seconds time))
+  (define (time->bytes ns-bytes s-bytes)
+    (let ((bv (make-bytevector (+ ns-bytes s-bytes) #x00)))
+      (bytevector-uint-set! bv        0 nanoseconds (endianness big) ns-bytes)
+      (bytevector-uint-set! bv ns-bytes     seconds (endianness big)  s-bytes)
+      bv))
+  (define data
+    (cond
+      ((and (zero? nanoseconds) (< seconds (expt 2 32)))
+       (time->bytes 0 32))
+      ((and (< nanoseconds (expt 2 30)) (< seconds (expt 2 34)))
+       (time->bytes 30 34))
+      ((and (< nanoseconds (expt 2 34)) (< seconds (expt 2 64)))
+       (time->bytes 32 64))
+      (else (throw 'value-out-of-range))))
+  (ext -1 data))
