@@ -45,10 +45,10 @@ unpack one from a binary output port.
    (unpack-from (current-input-port))
 
 In the above code we have two variants of `pack` and `unpack`: a pure one and
-an impure one with an exclamation mark suffix. The pure variant performs the
-packing or unpacking without any side effects by returning the packed bytes or the
-unpacked object. The impure variant on the other hand writes to or reads from a
-port as a side effect, but does not return anything.
+an impure one with a `to`- or `from` suffix. The pure variant performs the
+packing or unpacking without any side effects by returning the packed bytes or
+the unpacked object. The impure variant on the other hand writes to or reads
+from a port as a side effect, but does not return anything.
 
 
 Status of the project
