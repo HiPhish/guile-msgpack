@@ -19,23 +19,14 @@
 
 (define-module (msgpack ext)
   #:use-module ((rnrs bytevectors)
-                #:select (make-bytevector bytevector? bytevector-length bytevector-uint-set! bytevector-uint-ref endianness))
+                #:select (bytevector? bytevector-length))
   #:use-module ((srfi srfi-9)
                 #:select (define-record-type))
   #:use-module ((srfi srfi-9 gnu)
                 #:select (set-record-type-printer!))
-  #:use-module ((srfi srfi-11)
-                #:select (let-values))
-  #:use-module ((srfi srfi-19)
-                #:select (time-utc make-time))
   #:use-module ((srfi srfi-28)
                 #:select (format))
-  #:use-module ((ice-9 match)
-                #:select (match))
-  #:export (ext
-            ext?
-            ext-type
-            ext-data))
+  #:export (ext ext?  ext-type ext-data))
 
 (define <ext>
   (make-record-type "<ext>" '(type data)))
@@ -70,53 +61,3 @@
   (λ (record port)
     (display (format "#<ext ~a ~a>" (ext-type record) (ext-data record))
              port)))
-
-;; ---[ Conversions ]----------------------------------------------------------
-;; The following conversion have been defined by MessagePack
-
-(define (ext->time ext)
-  "- Scheme Procedure: ext->timestamp ext
-     Return a SRFI 19 time object from an extension object of type -1 as
-     defined by the MessagePack specification."
-  (define type (ext-type ext))
-  (define data (ext-data ext))
-  (define (data->times ns-bytes s-bytes)
-    "Disassemble the data into nanoseconds and seconds"
-    (values (bytevector-uint-ref data        0 (endianness big) ns-bytes)
-            (bytevector-uint-ref data ns-bytes (endianness big)  s-bytes)))
-
-  (unless (= -1 (ext-type ext))
-    (throw 'wrong-type-arg "Type must be -1" type))
-  (let-values (((nanoseconds seconds)
-                (match (bytevector-length data)
-                  (32 (data->times  0 32))
-                  (64 (data->times 30 34))
-                  (96 (data->times 32 64))
-                  (_ (throw 'wrong-type-arg "Invalid data for timestamp")))))
-    (make-time time-utc nanoseconds seconds)))
-
-(define (time->ext time)
-  "- Scheme Procedure: time->ext time
-     Return a MessagePack extension object of type -1 generated from the
-     contents of the SRFI-19 time object TIME.
-     
-     As per MessagePack specifications, the number of nanoseconds may not be
-     larger than an unsigned 32-bit integer, and the number of seconds may not
-     be larger than a 64-bit unsigned integer."
-  (define nanoseconds (time nanoseconds time))
-  (define     seconds (time     seconds time))
-  (define (time->bytes ns-bytes s-bytes)
-    (let ((bv (make-bytevector (+ ns-bytes s-bytes) #x00)))
-      (bytevector-uint-set! bv        0 nanoseconds (endianness big) ns-bytes)
-      (bytevector-uint-set! bv ns-bytes     seconds (endianness big)  s-bytes)
-      bv))
-  (define data
-    (cond
-      ((and (zero? nanoseconds) (< seconds (expt 2 32)))
-       (time->bytes 0 32))
-      ((and (< nanoseconds (expt 2 30)) (< seconds (expt 2 34)))
-       (time->bytes 30 34))
-      ((and (< nanoseconds (expt 2 34)) (< seconds (expt 2 64)))
-       (time->bytes 32 64))
-      (else (throw 'value-out-of-range))))
-  (ext -1 data))
