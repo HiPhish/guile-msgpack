@@ -20,9 +20,11 @@
 (define-module (msgpack)
   #:use-module (msgpack pack)
   #:use-module (msgpack unpack)
-  #:use-module (msgpack ext)
   #:use-module (msgpack nothing)
+  #:use-module (msgpack ext)
+  #:use-module (msgpack ext timestamp)
   #:re-export (pack-to pack float-precision packing-table
                unpack-from unpack
                nothing? nothing
-               ext? ext ext-type ext-data))
+               ext? ext ext-type ext-data
+               ext->time time->ext))

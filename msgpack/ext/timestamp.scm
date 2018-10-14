@@ -30,7 +30,7 @@
                 #:select (match)))
 
 (define (ext->time ext)
-  "- Scheme Procedure: ext->timestamp ext
+  "- Scheme Procedure: ext->time ext
      Return a SRFI 19 time object from an extension object of type -1 as
      defined by the MessagePack specification."
   (define type (ext-type ext))
