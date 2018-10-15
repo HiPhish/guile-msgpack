@@ -187,6 +187,40 @@ makes it easy to convert the extension object back to a rational number:
 @end example
 
 
+@subsubsection Timestamp extension type
+
+A timestamp is an extension object of type @math{-1}; it represents a time
+duration made from seconds and nanoseconds. We represent a timestamp as a time
+object according to SRFI 19 (@pxref{SRFI-19 Time,,, guile}).
+
+The specification allows only for times stamps with non-negative seconds and
+nanoseconds, the number of seconds must not exceed the size of an unsigned
+34-bit integer, and the number of nanoseconds must not exceed the size of an
+unsigned 64-bit integer.
+
+Please note that the seconds and nanoseconds in a time object and an extension
+object do not have to match exactly as long as they refer to the same time. One
+second consists of one billion (milliard) nanoseconds, therefore one can
+decrement the nanoseconds by one billion (milliard) and increment the seconds
+by one, or vice-versa, without affecting the actual time value. When converting
+time objects to extension objects, the format which takes up the least amount
+of memory is chosen. When converting extension objects to time objects the
+choice depends on the Guile implementation.
+
+@deffn {Scheme procedure} ext->time ext
+Return a time object from an extension object with a @code{type} of @code{-1}.
+It is an error if the object has a different @code{type} or if its @code{data}
+does not comply to the specification.
+@end deffn
+
+@deffn {Scheme procedure} time->ext time
+Return a MessagePack extension object of @code{type} @math{-1} generated from
+the SRFI-19 time object @code{time}. The smallest possible format will be
+chosen. It is an error if the number of seconds or nanoseconds is outside the
+ranged allowed by the specification.
+@end deffn
+
+
 @node Packing
 @section Packing
 
