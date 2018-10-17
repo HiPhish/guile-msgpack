@@ -43,20 +43,21 @@
      defined by the MessagePack specification."
   (define type (ext-type ext))
   (define data (ext-data ext))
-  (define (data->times ns-bytes s-bytes)
-    "Disassemble the data into nanoseconds and seconds"
-    (values (bytevector-uint-ref data        0 (endianness big) ns-bytes)
-            (bytevector-uint-ref data ns-bytes (endianness big)  s-bytes)))
-
+  (define (fetch-uint idx len)
+    (bytevector-uint-ref data idx (endianness big) len))
   (unless (= -1 (ext-type ext))
     (throw 'wrong-type-arg "Type must be -1" type))
-  (let-values (((nanoseconds seconds)
+  (let-values (((nanosecond second)
                 (match (bytevector-length data)
-                  ( 4 (data->times 0 4))
-                  ( 8 (data->times (/ 30 8) (/ 34 8)))  ; FIXME: this is totally fucked
-                  (12 (data->times 4 8))
+                  ( 4 (values 0
+                              (fetch-uint 0 4)))
+                  ( 8 (values (ash (fetch-uint 0 4) -2)
+                              (logand (fetch-uint 3 5)
+                                      #x03ffffffff)))
+                  (12 (values (fetch-uint 0 4)
+                              (fetch-uint 4 8)))
                   (_  (throw 'wrong-type-arg "Invalid data for timestamp")))))
-    (make-time time-utc nanoseconds seconds)))
+    (make-time time-utc nanosecond second)))
 
 (define (time->ext time)
   "- Scheme Procedure: time->ext time

@@ -29,9 +29,13 @@
   (syntax-rules ()
     ((_ nanosecond second
         (byte byte* ...))
-     (test-assert
-       (equal? (time->ext (make-time time-utc nanosecond second))
-               (ext -1 (u8-list->bytevector '(byte byte* ...))))))))
+     (begin
+       (test-assert
+         (equal? (time->ext (make-time time-utc nanosecond second))
+                 (ext -1 (u8-list->bytevector '(byte byte* ...)))))
+       (test-assert
+         (equal? (ext->time (ext -1 (u8-list->bytevector '(byte byte* ...))))
+                 (make-time time-utc nanosecond second)))))))
 
 (test-begin "Timestamp extension")
 (test-case 0 0
