@@ -23,11 +23,19 @@
   #:use-module ((srfi srfi-11)
                 #:select (let-values))
   #:use-module ((srfi srfi-19)
-                #:select (time-utc make-time))
+                #:select (time-utc make-time time-nanosecond time-second))
   #:use-module ((rnrs bytevectors)
-                #:select (make-bytevector bytevector-length bytevector-uint-ref bytevector-uint-set! endianness))
+                #:select (make-bytevector
+                          bytevector-length
+                          bytevector-uint-ref
+                          bytevector-uint-set!
+                          bytevector-u8-ref
+                          bytevector-u8-set!
+                          endianness))
   #:use-module ((ice-9 match)
-                #:select (match)))
+                #:select (match))
+  #:export (ext->time time->ext))
+
 
 (define (ext->time ext)
   "- Scheme Procedure: ext->time ext
@@ -44,10 +52,10 @@
     (throw 'wrong-type-arg "Type must be -1" type))
   (let-values (((nanoseconds seconds)
                 (match (bytevector-length data)
-                  (32 (data->times  0 32))
-                  (64 (data->times 30 34))
-                  (96 (data->times 32 64))
-                  (_ (throw 'wrong-type-arg "Invalid data for timestamp")))))
+                  ( 4 (data->times 0 4))
+                  ( 8 (data->times (/ 30 8) (/ 34 8)))  ; FIXME: this is totally fucked
+                  (12 (data->times 4 8))
+                  (_  (throw 'wrong-type-arg "Invalid data for timestamp")))))
     (make-time time-utc nanoseconds seconds)))
 
 (define (time->ext time)
@@ -58,20 +66,44 @@
      As per MessagePack specifications, the number of nanoseconds may not be
      larger than an unsigned 32-bit integer, and the number of seconds may not
      be larger than a 64-bit unsigned integer."
-  (define nanoseconds (time nanoseconds time))
-  (define     seconds (time     seconds time))
-  (define (time->bytes ns-bytes s-bytes)
-    (let ((bv (make-bytevector (+ ns-bytes s-bytes) #x00)))
-      (bytevector-uint-set! bv        0 nanoseconds (endianness big) ns-bytes)
-      (bytevector-uint-set! bv ns-bytes     seconds (endianness big)  s-bytes)
-      bv))
-  (define data
+  (define 1mrd (expt 10 9))  ; One billion (milliard)
+  (define nanosecond (time-nanosecond time))
+  (define     second (time-second     time))
+  ;; Implementation note: it is possible for the Guile implementation to divide
+  ;; the nanoseconds by 10^9, add the result to the seconds and keep only the
+  ;; remainder as nanoseconds. We can detect such cases, subtract some seconds
+  ;; from the seconds and add them back to the nanoseconds. This extends our
+  ;; range beyond the naive approach.
+  (define (data nanosecond second)
+    "Compute the data bytevector from the nanoseconds and seconds."
+    ; (display (format "ns: ~a; s: ~a\n" nanosecond second))
     (cond
-      ((and (zero? nanoseconds) (< seconds (expt 2 32)))
-       (time->bytes 0 32))
-      ((and (< nanoseconds (expt 2 30)) (< seconds (expt 2 34)))
-       (time->bytes 30 34))
-      ((and (< nanoseconds (expt 2 34)) (< seconds (expt 2 64)))
-       (time->bytes 32 64))
+      ((and (zero? nanosecond) (< second (expt 2 32)))
+       (let ((bv (make-bytevector (/ 32 8))))
+         (bytevector-uint-set! bv 0 second (endianness big) (/ 32 8))
+         bv))
+      ((and (< nanosecond (expt 2 30)) (< second (expt 2 34)))
+       (let ((bv (make-bytevector (/ (+ 30 34) 8)))
+             (nanosecond (ash nanosecond 2))
+             (second (logior second (ash (logand (ash nanosecond 2) #xFF) 32))))
+         (bytevector-uint-set! bv 0 nanosecond (endianness big) 4)
+         (bytevector-uint-set! bv 3 second     (endianness big) 5)
+         bv))
+      ;; We can fit a whole extra second into the nanoseconds under the
+      ;; following condition
+      ((and (< nanosecond (- (expt 2 30) 1mrd))
+            (<     second (+ (expt 2 34)    1)))
+       (data (+ nanosecond 1mrd) (1- second)))
+      ((and (< nanosecond (expt 2 32)) (< second (expt 2 64)))
+       (let ((bv (make-bytevector (/ (+ 32 64) 8))))
+         (bytevector-uint-set! bv 0 nanosecond (endianness big) 4)
+         (bytevector-uint-set! bv 4     second (endianness big) 8)
+         bv))
+      ;; We can fit four extra seconds into the nanoseconds under the following
+      ;; condition
+      ((and (< nanosecond (- (expt 2 32) (* 4 1mrd)))
+            (<     second (+ (expt 2 64)          4)))
+       (data (+ nanosecond (* 4 1mrd))
+             (-     second          4)))
       (else (throw 'value-out-of-range))))
-  (ext -1 data))
+  (ext -1 (data nanosecond second)))
