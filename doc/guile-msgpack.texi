@@ -144,7 +144,7 @@ The following bindings reside in the @code{(msgpack ext)} module.
 @deffn {Scheme procedure} ext type data
 Produce a new instance of the @code{ext} record type. The @code{type} must be
 an exact real integer in the range -128--127, and the @code{data} must be a
-bytevector of less than @math{2^32} bytes (4GiB) in length.
+bytevector of less than @math{2^{32}} bytes (4GiB) in length.
 @end deffn
 
 @deffn {Scheme procedure} ext? object
@@ -189,14 +189,14 @@ makes it easy to convert the extension object back to a rational number:
 
 @subsubsection Timestamp extension type
 
-A timestamp is an extension object of type @math{-1}; it represents a time
-duration made from seconds and nanoseconds. We represent a timestamp as a time
-object according to SRFI 19 (@pxref{SRFI-19 Time,,, guile}).
+A timestamp is an extension object of type @math{-1}, it represents a time
+duration consisting of nanoseconds and seconds. We represent a timestamp as a
+UTC time object according to SRFI 19 (@pxref{SRFI-19 Time,,, guile}).
 
-The specification allows only for times stamps with non-negative seconds and
-nanoseconds, the number of seconds must not exceed the size of an unsigned
-34-bit integer, and the number of nanoseconds must not exceed the size of an
-unsigned 64-bit integer.
+The specification allows only for times stamps with non-negative components,
+the number of nanoseconds must not exceed the size of an unsigned 32-bit
+integer, and the number of seconds must not exceed the size of an unsigned
+64-bit integer.
 
 Please note that the seconds and nanoseconds in a time object and an extension
 object do not have to match exactly as long as they refer to the same time. One
@@ -219,6 +219,16 @@ the SRFI-19 time object @code{time}. The smallest possible format will be
 chosen. It is an error if the number of seconds or nanoseconds is outside the
 ranged allowed by the specification.
 @end deffn
+
+The following example illustrates how to use these procedures:
+
+@example
+;; Evaluates to #<ext -1 #vu8(0 0 0 #x34 0 0 0 #x2A)>
+(time->ext (make-time time-utc 13 42))
+
+;; Evaluates to #<time type: time-utc nanosecond: 13 second: 42>
+(ext->time (ext -1 #vu8(0 0 0 #x34 0 0 0 #x2A)))
+@end example
 
 
 @node Packing
