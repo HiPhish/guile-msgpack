@@ -2,9 +2,11 @@
 # Set the following variables when invoking make:
 PREFIX = ./build
 GUILE = guile
-GUILE_VERSION = 2.2
 TEXI2ANY = texi2any
 
+# ---[ Private variables ]-----------------------------------------------------
+# Version of Guile, used to construct library path
+guile_ver = $(shell $(GUILE) -c '(display (effective-version))')
 
 # ===[ Phony targets ]=========================================================
 # These targets can be specified when invoking make
@@ -12,8 +14,8 @@ TEXI2ANY = texi2any
 
 all: lib doc
 
-lib: $(PREFIX)/share/guile/site/$(GUILE_VERSION)/msgpack \
-	$(PREFIX)/share/guile/site/$(GUILE_VERSION)/msgpack.scm
+lib: $(PREFIX)/share/guile/site/$(guile_ver)/msgpack \
+	$(PREFIX)/share/guile/site/$(guile_ver)/msgpack.scm
 
 doc: $(PREFIX)/share/info/guile-msgpack.info
 
@@ -33,11 +35,11 @@ check: ./test
 
 # ===[ File targets ]==========================================================
 # Targets which actually build files, used by the phony targets
-$(PREFIX)/share/guile/site/$(GUILE_VERSION)/msgpack: msgpack
+$(PREFIX)/share/guile/site/$(guile_ver)/msgpack: msgpack
 	@mkdir -p $(dir $@)
 	@cp -r $< $@
 
-$(PREFIX)/share/guile/site/$(GUILE_VERSION)/%.scm: %.scm
+$(PREFIX)/share/guile/site/$(guile_ver)/%.scm: %.scm
 	@mkdir -p $(dir $@)
 	@cp -r $< $@
 

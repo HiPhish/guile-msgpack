@@ -4,15 +4,15 @@
  Installation
 ##############
 
-
-Use `make` to build the library and the documentation. The following targets
-are defined (`all` is the default target):
+Use `make` to build the library and the documentation. All dependencies listed
+below are build-time dependencies. The following targets are defined (`all` is
+the default target):
 
 =======  ============  ========================================================
 Name     Dependencies  Description
 =======  ============  ========================================================
 `all`    see below     equivalent to `lib doc`
-`lib`                  The Guile library
+`lib`    Guile         The Guile library
 `doc`    Texinfo       Documentation in Info format
 `pdf`    Texinfo, TeX  Documentation in PDF format
 `html`   Texinfo       Documentation in HTML format
@@ -23,14 +23,13 @@ Name     Dependencies  Description
 The following variables can be passed to the makefile for customisation (in
 addition to the standard makefile variables):
 
-================  ==========  =================================================
-Name              Default     Description
-================  ==========  =================================================
-`PREFIX`          `build`     Build destination
-`GUILE`           `guile`     Guile binary for running tests
-`GUILE_VERSION`   `2.2`       Version of guile as `major.minor`
-`TEXI2ANY`        `texi2any`  Texinfo binary for building documentation
-================  ==========  =================================================
+==========  ==========  =======================================================
+Name        Default     Description
+==========  ==========  =======================================================
+`PREFIX`    `build`     Build destination
+`GUILE`     `guile`     Guile binary for running tests
+`TEXI2ANY`  `texi2any`  Texinfo binary for building documentation
+==========  ==========  =======================================================
 
 If you only want to try out the repository in-place you can also add it to the
 Guile's load path:
