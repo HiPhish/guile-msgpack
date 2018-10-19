@@ -39,15 +39,15 @@ in-memory objects. This library implements procedures to perform these two
 actions in GNU Guile.
 
 @menu
-* MessagePack Overview::  The MessagePack format in general
-* Guile API::             Using MessagePack in GNU Guile
+* MessagePack Guide::  The MessagePack format in general
+* Guile API::          Using MessagePack in GNU Guile
 * GNU Free Documentation License::
 @end menu
 @end ifnottex
 
 
-@node MessagePack Overview
-@chapter MessagePack Overview
+@node MessagePack Guide
+@chapter MessagePack Guide
 
 From the @uref{https://msgpack.org/,MessagePack website}:
 
@@ -72,6 +72,176 @@ are easy to read and manually edit by humans, but parsing them is a non-trivial
 task. Human-readability is not always a priority: for instance, if we want to
 exchange data between two processes for remote procedure calls, that data will
 never be read by a human.
+
+@node Motivation
+@section Motivation
+
+Suppose we have two processes and we wish to exchange data between them.
+Consider the following crude illustration:
+
+@example
++-------------+          Outgoing          +-------------+
+|             | -------------------------> |             |
+|  Process 1  |                            |  Process 2  |
+|             | <------------------------- |             |
++-------------+          Incoming          +-------------+
+@end example
+
+The first process wants to send some ``object'' to the second process. The
+object can be anything: a number, a string, a boolean value, a list of objects,
+a hash table, a time stamp, or any additional type you want. The two processes
+do not necessarily have to be the same program, or run on the same machine or
+even run at the same time.
+
+The easiest thing to do would be to just dump the in-memory representation of
+the object from inside the first process, and feed those raw bytes into the
+second process. However, there is no guarantee that the two processes can
+understand each other's ``dumped format'', which is why we need some format to
+agree on.
+
+The act of turning an in-memory object into raw bytes is generally called
+@emph{serialization}, and the act of turning raw bytes into an in-memory object
+is called @emph{deserialization}. In MessagePack terminology it is customary to
+refer to them as @emph{packing} and @emph{unpacking} respectively, and that is
+what we will call them from now on.
+
+MessagePack defines a data serialization format which prefers speed and small
+memory sizes. This makes it particularly well suited for inter-process
+communication. We could in theory also write the packed object to a file and
+pass the file around to other people to look at, but the binary format makes it
+hard to read for humans.
+
+@node A Guided Tour
+@section A Guided Tour
+
+The easiest way to get acquainted with MessagePack is to try it out. Install
+this library, fire up your Guile REPL, then follow along with the code.
+Remember that you can always use the @code{,describe} meta command to read the
+docstring of a procedure. Let's first import the MessagePack module.
+
+@example
+(use-modules (msgpack))
+@end example
+
+MessagePack is often abbreviated as ``msgpack'', and this name is used
+throughout the library. There a several modules provided, with the topmost
+module @code{msgpack} being an ``umbrella module'' which exports everything the
+submodules export.
+
+Let us now pack some objects.
+
+@example
+(pack 13)
+⇒ #vu8(13)
+
+(pack #f)
+⇒ #vu8(194)
+
+(pack "Hello world!")
+⇒ #vu8(172 72 101 108 108 111 32 119 111 114 108 100 33)
+
+(pack 13 #f "Hello world!")
+⇒ #vu8(13 194 172 72 101 108 108 111 32 119 111 114 108 100 33)
+@end example
+
+The @code{pack} procedure takes one or more objects and turns them into bytes,
+returning a bytevector. We could now write those bytes to an output port to
+send them off. As a shorthand the @code{pack-to} procedure takes in a binary
+output port, followed by one or more objects to pack.
+
+@example
+(pack-to (current-output-port) "Hello world!")
+@end example
+
+The complements to @code{pack} and @code{pack-to} are @code{unpack} and
+@code{unpack-from}.
+
+@example
+(unpack #vu8(13))
+⇒ 13
+
+(unpack #vu8(194))
+⇒ #f
+
+(unpack #vu8(172 72 101 108 108 111 32 119 111 114 108 100 33))
+⇒ "Hello world!"
+
+(unpack #vu8(13 194 172 72 101 108 108 111 32 119 111 114 108 100 33))
+⇒ 13 
+⇒ #f
+⇒ "Hello world!"
+
+(unpack-from (current-input-port))
+@end example
+
+As you can see, just as it was possible to pack multiple values at the same
+time, it is also possible to unpack multiple values at the same time. These
+four procedures are what you will be using most of the time, they are
+documented in detail below, see @ref{Packing} and @ref{Unpacking}.
+
+@node Type system
+@section Type system
+
+For the most part packable types have a clear 1:1 mapping to Guile types;
+arrays unpack to vectors, dictionaries to hash tables, symbols pack to strings,
+vectors and lists to arrays. See the relevant sections for the exact details.
+
+MessagePack defines the @code{nil} type for ``nothingness''. Guile has no
+unambiguous type which could be used, so the library defines the new
+@code{nothing} type for this purpose. There is only one singleton instance of
+this object, which is created though the @code{nothing} procedure.
+
+@example
+(use-modules (msgpack nothing))
+
+(pack (nothing))
+⇒ #vu8(192)
+
+(unpack #vu8(129))
+⇒ #<nothing>
+
+;; Since this is a singleton, all instances are eq?
+(eq? (nothing) (unpack #vu8(129)))
+⇒ #t
+@end example
+
+While the MessagePack type system does define the most common types, there is
+always room for extension. This is what the @code{ext} type is for: every
+instance is a pair of an integer number and a bytevector. The number is a tag
+which specifies the type of the extension and the bytevector carries the actual
+data.
+
+MessagePack reserves negative type values for its own extensions, while
+non-negative type values are for your custom extensions. Let us assume you want
+to pack exact rational numbers without losing the exactness. None of the
+default types are suitable, so we will pick extension type zero.
+
+@example
+(use-modules (msgpack ext))
+
+(define (rational->ext q)
+  (unless (rational? q)
+    (throw 'type-error))
+  (ext 0
+       (pack (numerator   q)
+             (denominator q))))
+
+(define (rational->ext e)
+  (unless (and (ext? e) (= 0 (ext-type e)))
+    (throw 'type-error))
+  (let-values (((n d) (unpack (ext-data e))))
+    (/ n d)))
+
+(rational->ext 2/3)
+⇒ #<ext 0 #vu8(2 3)>
+
+(ext->rational (ext 0 #vu8(2 3)))
+⇒ 2/3
+@end example
+
+Of course our recipient must also be aware of our extension. In the above
+example we pack the two components of our rational number as two integers and
+unpack by binding the multiple return values of @code{unpack}.
 
 
 @node Guile API
@@ -160,32 +330,6 @@ Accessor for the @code{type} field of an @code{ext} object.
 Accessor for the @code{data} field of an @code{ext} object.
 @end deffn
 
-Let us assume that you wish to pack exact rational numbers by preserving their
-exactness. By default such a number would first need to be converted to an
-inexact real number which would then be packed as a floating-point number.
-This is unacceptable if exactness is to be preserved, so we will define a new
-type. Suppose this extension type uses the tag number 13.
-
-@example
-(define (rational->ext x)
-  (ext 13
-       (pack (vector (numerator   x)
-                     (denominator x)))))
-@end example
-
-We use MessagePack to pack a vector of both the numerator and denominator as a
-bytevector and store that bytevector as the data of our object. This in turn
-makes it easy to convert the extension object back to a rational number:
-
-@example
-(define (ext13->rational e)
-  ;; The data gets unpacked as a vector of two numbers
-  (define numbers (unpack (ext-data e)))
-  ;; The result is the quotient of those two numbers
-  (/ (vector-ref numbers 0)
-     (vector-ref numbers 1)))
-@end example
-
 
 @subsubsection Timestamp extension type
 
@@ -223,11 +367,11 @@ ranged allowed by the specification.
 The following example illustrates how to use these procedures:
 
 @example
-;; Evaluates to #<ext -1 #vu8(0 0 0 #x34 0 0 0 #x2A)>
 (time->ext (make-time time-utc 13 42))
+⇒ #<ext -1 #vu8(0 0 0 52 0 0 0 42)>
 
-;; Evaluates to #<time type: time-utc nanosecond: 13 second: 42>
 (ext->time (ext -1 #vu8(0 0 0 #x34 0 0 0 #x2A)))
+⇒ #<time type: time-utc nanosecond: 13 second: 42>
 @end example
 
 

@@ -4,6 +4,12 @@
  Installation
 ##############
 
+The following describes all that is needed for building the MessagePack
+library, as well as the accompanying documentation. The information is
+sufficient to build everything manually or define a package for a package
+manager. Deviations of the build process from this file are considered bugs and
+shall be reported.
+
 Use `make` to build the library and the documentation. All dependencies listed
 below are build-time dependencies. The following targets are defined (`all` is
 the default target):
