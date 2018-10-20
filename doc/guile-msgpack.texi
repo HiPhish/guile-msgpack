@@ -40,7 +40,7 @@ actions in GNU Guile.
 
 @menu
 * MessagePack Guide::  The MessagePack format in general
-* Guile API::          Using MessagePack in GNU Guile
+* MessagePack API::    Using MessagePack in GNU Guile
 * GNU Free Documentation License::
 @end menu
 @end ifnottex
@@ -106,7 +106,7 @@ refer to them as @emph{packing} and @emph{unpacking} respectively, and that is
 what we will call them from now on.
 
 MessagePack defines a data serialization format which prefers speed and small
-memory sizes. This makes it particularly well suited for inter-process
+memory sizes, this makes it particularly well suited for inter-process
 communication. We could in theory also write the packed object to a file and
 pass the file around to other people to look at, but the binary format makes it
 hard to read for humans.
@@ -147,7 +147,8 @@ Let us now pack some objects.
 The @code{pack} procedure takes one or more objects and turns them into bytes,
 returning a bytevector. We could now write those bytes to an output port to
 send them off. As a shorthand the @code{pack-to} procedure takes in a binary
-output port, followed by one or more objects to pack.
+output port, followed by one or more objects to pack, and sends then off
+through the port without allocating a bytevector.
 
 @example
 (pack-to (current-output-port) "Hello world!")
@@ -174,7 +175,7 @@ The complements to @code{pack} and @code{pack-to} are @code{unpack} and
 (unpack-from (current-input-port))
 @end example
 
-As you can see, just as it was possible to pack multiple values at the same
+As we can see, just as it was possible to pack multiple values at the same
 time, it is also possible to unpack multiple values at the same time. These
 four procedures are what you will be using most of the time, they are
 documented in detail below, see @ref{Packing} and @ref{Unpacking}.
@@ -244,8 +245,8 @@ example we pack the two components of our rational number as two integers and
 unpack by binding the multiple return values of @code{unpack}.
 
 
-@node Guile API
-@chapter Guile API
+@node MessagePack API
+@chapter MessagePack API
 
 All of the API is exposed via the @code{(msgpack)} module, which only serves to
 re-export the binding from the more specific sub-modules. We can divide the
@@ -292,6 +293,7 @@ singleton object.
 
 ;; This always evaluates to '#t':
 (eq? val1 val2)
+⇒ #t
 @end example
 @end deffn
 
@@ -314,7 +316,7 @@ The following bindings reside in the @code{(msgpack ext)} module.
 @deffn {Scheme procedure} ext type data
 Produce a new instance of the @code{ext} record type. The @code{type} must be
 an exact real integer in the range -128--127, and the @code{data} must be a
-bytevector of less than @math{2^{32}} bytes (4GiB) in length.
+bytevector of less than @math{2@sup{32}} bytes (4GiB) in length.
 @end deffn
 
 @deffn {Scheme procedure} ext? object
@@ -323,11 +325,13 @@ an instance of @code{ext}, and @code{#f} otherwise.
 @end deffn
 
 @deffn {Scheme procedure} ext-type ext
-Accessor for the @code{type} field of an @code{ext} object.
+Accessor for the @code{type} field of an @code{ext} object, returns an exact
+integer.
 @end deffn
 
 @deffn {Scheme procedure} ext-data ext
-Accessor for the @code{data} field of an @code{ext} object.
+Accessor for the @code{data} field of an @code{ext} object, returns a
+bytevector.
 @end deffn
 
 
@@ -351,6 +355,8 @@ time objects to extension objects, the format which takes up the least amount
 of memory is chosen. When converting extension objects to time objects the
 choice depends on the Guile implementation.
 
+The following bindings reside in the @code{(msgpack ext timestamp)} module.
+
 @deffn {Scheme procedure} ext->time ext
 Return a time object from an extension object with a @code{type} of @code{-1}.
 It is an error if the object has a different @code{type} or if its @code{data}
@@ -368,7 +374,7 @@ The following example illustrates how to use these procedures:
 
 @example
 (time->ext (make-time time-utc 13 42))
-⇒ #<ext -1 #vu8(0 0 0 52 0 0 0 42)>
+⇒ #<ext -1 #vu8(0 0 0 #x34 0 0 0 #x2A)>
 
 (ext->time (ext -1 #vu8(0 0 0 #x34 0 0 0 #x2A)))
 ⇒ #<time type: time-utc nanosecond: 13 second: 42>
@@ -399,9 +405,9 @@ the precision depends on the @code{float-precision} parameter
 
 @item Vectors get packed as arrays
 
-@item Hash tables get packed maps
+@item Hash tables get packed as maps
 
-@item Extension objects get packed as @code{ext} objecs
+@item Extension objects get packed as @code{ext} objects
 @end itemize
 
 If there is more than one possibility the first one applicable in the above
@@ -427,15 +433,15 @@ of the packed objects.
 
 @deffn {Scheme parameter} packing-table
 An association list of predicate-procedure pairs. When packing the predicate of
-each entry (in order) is applied to @code{datum} and if one of them returns
+each entry (in order) is applied to @code{datum}, and if one of them returns
 true its corresponding procedure is applied to @code{out} and @code{datum} to
-pack @code{datum}. The @code{pack-to} and @code{pack} procedures exit after the
-first successfully matching predicate.
+pack @code{datum}. The @code{pack-to} and @code{pack} procedures terminate
+after the first successfully matching predicate.
 
-Note that the procedure must always write the data to the output port that is
-the first argument, even if you want to use @code{pack} rather than
-@code{pack-to}. If you wish to call pack objects inside a packing procedure use
-@code{pack-to} instead.
+The procedure takes in an open binary input port and an object, it must always
+write the data to the port even if you want to pack the object to a bytevector
+rather than send it through a port. If you wish to pack objects inside a
+packing procedure use @code{pack-to}.
 
 This table is mainly useful for defining packing procedures for your own data
 types. For example, if you wanted to pack @code{'()} as MessagePack's
@@ -448,6 +454,7 @@ types. For example, if you wanted to pack @code{'()} as MessagePack's
 (parameterize (packing-table (cons (cons null? pack-null)
                                    (packing-table))
   (pack '()))
+⇒ #vu8(192)
 @end example
 
 Since the packing table is consulted in order, our new prepended entry will be
@@ -491,8 +498,8 @@ types, but of course no such mapping is perfect. If you disagree, I recommend
 wrapping the @code{unpack-from} and @code{unpack} procedures like this:
 
 @example
-;; Unpack 'nil' as an empty list ('bytes' is some bytevector of packed data)
-(let ((datum (unpack bytes)))
+;; Unpack 'nil' as an empty list
+(let ((datum (unpack-from (current-input-port))))
   (cond
     ((nothing? datum) '())
     (else datum)))
@@ -506,8 +513,8 @@ Unpacks a single datum from the open binary input port @code{in} and returns
 the unpacked object. If the object is a collection this  procedure is called
 recursively.
 
-If the port is empty, meaning that not a single byte could be read, an
-exception of the @code{empty-port} will be thrown.
+If the port is empty, meaning that not a single byte could be read, the
+exception @code{empty-port} will be thrown.
 
 If an object could not be read fully an exception will be raised. Either
 @code{unexpected-eof} if an entire object is missing from a collection (such as
@@ -529,10 +536,20 @@ returned, but it is not an error.
 
 ;; Bind the first value only
 (define one (unpack bv))
+one
+⇒ 1
+
 ;; Bind all values (requires knowing how many there are)
 (define-values (one two hello) (unpack bv))
+one two hello
+⇒ 1
+⇒ 2
+⇒ "hello"
+
 ;; Bind all values to a list (works with any amount)
 (define-values objects (unpack bv))
+objects
+⇒ (1 2 "hello")
 @end example
 @end deffn
 
