@@ -8,6 +8,10 @@ This is a GNU Guile library implementing the MessagePack data serialisation
 format. It allows you to serialise (pack) and de-serialise (unpack) Scheme
 objects to and from binary data according to the MessagePack format.
 
+.. image:: screenshot.png
+   :alt: Screenshot of running a Racket REPL in Neovim, using Racket to control
+         Neovim
+   :align: center
 
 Installation
 ############
