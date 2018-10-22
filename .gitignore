@@ -1,2 +1,4 @@
-*.log   # Log files created by tests
-build/  # Build output
+# Log files created by tests
+*.log
+# Build products
+build/
