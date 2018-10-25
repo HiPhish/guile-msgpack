@@ -185,7 +185,7 @@
       ((< size (expt 2 32)) (values #xC9 4))
       (else (throw 'ext-overflow e  "Data sequence too long"))))
   (put-u8 out tag)
-  (when (> tag #xD8)
+  (when (< tag #xD4)
     (let ((bv (make-bytevector nbytes)))
       (bytevector-uint-set! bv 0 size (endianness big) nbytes)
       (put-bytevector out bv)))

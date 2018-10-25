@@ -37,5 +37,5 @@
   ((time (1- (expt 2 30)) (1- (expt 2 34)))
    (#xD7 #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF))
   ((time (1- (expt 2 32)) (1- (expt 2 64)))
-   (#xC7 #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF)))
+   (#xC7 #x0C #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF #xFF)))
 (test-end "Timestamps")
