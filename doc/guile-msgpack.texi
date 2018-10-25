@@ -493,6 +493,8 @@ MessagePack types map onto Scheme types as follows:
 @item Maps get unpacked to hash tables using @code{equal?} for key comparison
 
 @item Extension objects get unpacked to @code{ext} objects
+
+@item Extension objects of type @code{-1} get unpacked to @code{time} objects
 @end itemize
 
 I tried to chose mappings which preserve semantic meaning and use existing data

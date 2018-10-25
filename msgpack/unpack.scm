@@ -22,6 +22,10 @@
 
 (use-modules ((msgpack nothing)
               #:select (nothing))
+             ((msgpack ext)
+              #:select (ext? ext-type))
+             ((msgpack ext timestamp)
+              #:select (ext->time))
              ((ice-9 binary-ports)
               #:select (get-u8
                         get-bytevector-n))
@@ -34,6 +38,7 @@
              ((rnrs bytevectors)
               #:select (bytevector-uint-ref
                         bytevector-sint-ref
+                        bytevector-s8-ref
                         utf8->string
                         bytevector-ieee-single-ref
                         bytevector-ieee-double-ref
@@ -48,47 +53,56 @@
      
      If the port is empty (not a single byte could be read) an 'empty-port
      exception will be raised."
+  (define (primitive-unpack)
+    "Unpack an object, but do not expand extension objects yet"
+    (cond
+      ((<= tag #x7F) tag)
+      ((<= #x80 tag #x8F) (unpack-map    (logand tag #b00001111) in))
+      ((<= #x90 tag #x9F) (unpack-array  (logand tag #b00001111) in))
+      ((<= #xA0 tag #xBF) (unpack-string (logand tag #b00011111) in))
+      ((= tag #xC0) (nothing))
+      ((= tag #xC1) (throw 'unpackable "#xC1 cannot be unpacked"))
+      ((= tag #xC2) #f)
+      ((= tag #xC3) #t)
+      ((= tag #xC4) (unpack-bytes (unpack-integer 1 #f in) in))
+      ((= tag #xC5) (unpack-bytes (unpack-integer 2 #f in) in))
+      ((= tag #xC6) (unpack-bytes (unpack-integer 4 #f in) in))
+      ((= tag #xC7) (unpack-ext   (unpack-integer 1 #f in) in))
+      ((= tag #xC8) (unpack-ext   (unpack-integer 2 #f in) in))
+      ((= tag #xC9) (unpack-ext   (unpack-integer 4 #f in) in))
+      ((= tag #xCA) (unpack-float 'single in))
+      ((= tag #xCB) (unpack-float 'double in))
+      ((= tag #xCC) (unpack-integer 1 #f in))
+      ((= tag #xCD) (unpack-integer 2 #f in))
+      ((= tag #xCE) (unpack-integer 4 #f in))
+      ((= tag #xCF) (unpack-integer 8 #f in))
+      ((= tag #xD0) (unpack-integer 1 #t in))
+      ((= tag #xD1) (unpack-integer 2 #t in))
+      ((= tag #xD2) (unpack-integer 4 #t in))
+      ((= tag #xD3) (unpack-integer 8 #t in))
+      ((= tag #xD4) (unpack-ext  1 in))
+      ((= tag #xD5) (unpack-ext  2 in))
+      ((= tag #xD6) (unpack-ext  4 in))
+      ((= tag #xD7) (unpack-ext  8 in))
+      ((= tag #xD8) (unpack-ext 16 in))
+      ((= tag #xD9) (unpack-string (unpack-integer 1 #f in) in))
+      ((= tag #xDA) (unpack-string (unpack-integer 2 #f in) in))
+      ((= tag #xDB) (unpack-string (unpack-integer 4 #f in) in))
+      ((= tag #xDC) (unpack-array  (unpack-integer 2 #f in) in))
+      ((= tag #xDD) (unpack-array  (unpack-integer 4 #f in) in))
+      ((= tag #xDE) (unpack-map    (unpack-integer 2 #f in) in))
+      ((= tag #xDF) (unpack-map    (unpack-integer 4 #f in) in))
+      (else (* -1 (- #x100 tag)))))  ; Negative fixint
   (define tag (get-u8 in))
   (when (eof-object? tag)
     (throw 'empty-port))
-  (cond
-    ((<= tag #x7F) tag)
-    ((<= #x80 tag #x8F) (unpack-map    (logand tag #b00001111) in))
-    ((<= #x90 tag #x9F) (unpack-array  (logand tag #b00001111) in))
-    ((<= #xA0 tag #xBF) (unpack-string (logand tag #b00011111) in))
-    ((= tag #xC0) (nothing))
-    ((= tag #xC1) (throw 'unpackable "#xC1 cannot be unpacked"))
-    ((= tag #xC2) #f)
-    ((= tag #xC3) #t)
-    ((= tag #xC4) (unpack-bytes (unpack-integer 1 #f in) in))
-    ((= tag #xC5) (unpack-bytes (unpack-integer 2 #f in) in))
-    ((= tag #xC6) (unpack-bytes (unpack-integer 4 #f in) in))
-    ((= tag #xC7) (unpack-ext   (unpack-integer 1 #f in) in))
-    ((= tag #xC8) (unpack-ext   (unpack-integer 2 #f in) in))
-    ((= tag #xC9) (unpack-ext   (unpack-integer 4 #f in) in))
-    ((= tag #xCA) (unpack-float 'single in))
-    ((= tag #xCB) (unpack-float 'double in))
-    ((= tag #xCC) (unpack-integer 1 #f in))
-    ((= tag #xCD) (unpack-integer 2 #f in))
-    ((= tag #xCE) (unpack-integer 4 #f in))
-    ((= tag #xCF) (unpack-integer 8 #f in))
-    ((= tag #xD0) (unpack-integer 1 #t in))
-    ((= tag #xD1) (unpack-integer 2 #t in))
-    ((= tag #xD2) (unpack-integer 4 #t in))
-    ((= tag #xD3) (unpack-integer 8 #t in))
-    ((= tag #xD4) (unpack-ext  1 in))
-    ((= tag #xD5) (unpack-ext  2 in))
-    ((= tag #xD6) (unpack-ext  4 in))
-    ((= tag #xD7) (unpack-ext  8 in))
-    ((= tag #xD8) (unpack-ext 16 in))
-    ((= tag #xD9) (unpack-string (unpack-integer 1 #f in) in))
-    ((= tag #xDA) (unpack-string (unpack-integer 2 #f in) in))
-    ((= tag #xDB) (unpack-string (unpack-integer 4 #f in) in))
-    ((= tag #xDC) (unpack-array  (unpack-integer 2 #f in) in))
-    ((= tag #xDD) (unpack-array  (unpack-integer 4 #f in) in))
-    ((= tag #xDE) (unpack-map    (unpack-integer 2 #f in) in))
-    ((= tag #xDF) (unpack-map    (unpack-integer 4 #f in) in))
-    (else (* -1 (- #x100 tag)))))  ; Negative fixint
+  (let ((primitive (primitive-unpack)))
+    (if (not (ext? primitive))
+      primitive
+      ;; Add new official extensions to the matches
+      (match (ext-type primitive)
+        (-1 (ext->time primitive))
+        (_  primitive)))))
 
 (define (unpack bytes)
   "- Scheme Procedure: unpack bytes
@@ -170,6 +184,6 @@
   "- Scheme Procedure: unpack-ext size in
      Unpack a MessagePack extension object of ‘size’ bytes length from binary
      input port ‘in’."
-  (define type (get-u8 in))
+  (define type (bytevector-s8-ref (get-bytevector-n in 1) 0))
   (define data (get-bytevector-n in size))
   (ext type data))
