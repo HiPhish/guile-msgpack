@@ -24,6 +24,8 @@
               #:select (nothing?))
              ((msgpack ext)
               #:select (ext? ext-type ext-data))
+             ((msgpack ext timestamp)
+              #:select (time->ext))
              ((ice-9 match)
               #:select (match))
              ((ice-9 binary-ports)
@@ -41,7 +43,9 @@
                         bytevector-ieee-single-set!
                         bytevector-ieee-double-set!
                         string->utf8
-                        endianness)))
+                        endianness))
+             ((srfi srfi-19)
+              #:select (time?)))
 
 
 ;; ----------------------------------------------------------------------------
@@ -52,6 +56,7 @@
       (match v
         ((or 'single 'double) v)
         (_ (throw 'wrong-type-arg "Must be either 'single or 'double"))))))
+
 
 ;; ----------------------------------------------------------------------------
 (define (pack-nothing out datum)
@@ -190,6 +195,7 @@
     (put-bytevector out bv))
   (put-bytevector out data))
 
+
 ;; ----------------------------------------------------------------------------
 (define packing-table
   (let ((int?   (λ (value) (and (integer? value) (exact?   value))))
@@ -205,7 +211,10 @@
         (,vector?     . ,pack-vector)
         ;; List
         (,hash-table? . ,pack-hash-table)
-        (,ext?        . ,pack-ext)))))
+        (,ext?        . ,pack-ext)
+        (,time?       . ,(λ (out t)
+                           (pack-ext out (time->ext t))))))))
+
 
 ;; ----------------------------------------------------------------------------
 (define (pack-to out . data)

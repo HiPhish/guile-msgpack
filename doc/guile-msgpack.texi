@@ -408,6 +408,8 @@ the precision depends on the @code{float-precision} parameter
 @item Hash tables get packed as maps
 
 @item Extension objects get packed as @code{ext} objects
+
+@item Time objects get packed as @code{ext} objects of type @code{-1}
 @end itemize
 
 If there is more than one possibility the first one applicable in the above
