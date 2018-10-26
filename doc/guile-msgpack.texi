@@ -227,7 +227,7 @@ default types are suitable, so we will pick extension type zero.
        (pack (numerator   q)
              (denominator q))))
 
-(define (rational->ext e)
+(define (ext->rational e)
   (unless (and (ext? e) (= 0 (ext-type e)))
     (throw 'type-error))
   (let-values (((n d) (unpack (ext-data e))))
@@ -298,7 +298,7 @@ singleton object.
 @end deffn
 
 @deffn {Scheme procedure} nothing? object
-Predicate for the @code{nothing} object, returns @code{#t} if @code{object} is
+Predicate for the @code{nothing} object, returns @code{#t} if @var{object} is
 the @code{nothing} object, and @code{#f} otherwise.
 @end deffn
 
@@ -314,23 +314,23 @@ by MessagePack.
 The following bindings reside in the @code{(msgpack ext)} module.
 
 @deffn {Scheme procedure} ext type data
-Produce a new instance of the @code{ext} record type. The @code{type} must be
-an exact real integer in the range -128--127, and the @code{data} must be a
+Produce a new instance of the @code{ext} record type. The @var{type} must be an
+exact real integer in the range -128--127, and the @var{data} must be a
 bytevector of less than @math{2@sup{32}} bytes (4GiB) in length.
 @end deffn
 
 @deffn {Scheme procedure} ext? object
-Type predicate for @code{ext} objects. Returns @code{#t} if @code{object} is
-an instance of @code{ext}, and @code{#f} otherwise.
+Type predicate for @code{ext} objects. Returns @code{#t} if @var{object} is an
+instance of @code{ext}, and @code{#f} otherwise.
 @end deffn
 
 @deffn {Scheme procedure} ext-type ext
-Accessor for the @code{type} field of an @code{ext} object, returns an exact
-integer.
+Accessor for the @code{type} field of an extension object @var{ext}, returns an
+exact integer.
 @end deffn
 
 @deffn {Scheme procedure} ext-data ext
-Accessor for the @code{data} field of an @code{ext} object, returns a
+Accessor for the @code{data} field of an extension object @var{ext}, returns a
 bytevector.
 @end deffn
 
@@ -358,14 +358,14 @@ choice depends on the Guile implementation.
 The following bindings reside in the @code{(msgpack ext timestamp)} module.
 
 @deffn {Scheme procedure} ext->time ext
-Return a time object from an extension object with a @code{type} of @code{-1}.
-It is an error if the object has a different @code{type} or if its @code{data}
-does not comply to the specification.
+Return a time object from an extension object @var{ext} with a @code{type} of
+@code{-1}.  It is an error if the object has a different @code{type} or if its
+@code{data} does not comply to the specification.
 @end deffn
 
 @deffn {Scheme procedure} time->ext time
 Return a MessagePack extension object of @code{type} @math{-1} generated from
-the SRFI-19 time object @code{time}. The smallest possible format will be
+the SRFI-19 time object @var{time}. The smallest possible format will be
 chosen. It is an error if the number of seconds or nanoseconds is outside the
 ranged allowed by the specification.
 @end deffn
@@ -417,15 +417,15 @@ order is used. You can add your own rules using the @code{packing-table}
 parameter.
 
 @deffn {Scheme procedure} pack-to out [datum ...]
-Pack each @code{datum} into the open binary output port @code{out}. If there
-are multiple ways of packing a @code{datum} the smallest possible format will
-be preferred. If the datum is a collection the packing procedure is called
+Pack each @var{datum} into the open binary output port @var{out}. If there are
+multiple ways of packing a @var{datum} the smallest possible format will be
+preferred. If the datum is a collection the packing procedure is called
 recursively.
 
-If a @code{datum} cannot be packed an exception will be raised. If the
-@code{datum} can only be packed partially (for example if a vector contains an
+If a @var{datum} cannot be packed an exception will be raised. If the
+@var{datum} can only be packed partially (for example if a vector contains an
 unpackable object) an exception will be raised as well, but bytes might already
-have been written to @code{out}.
+have been written to @var{out}.
 @end deffn
 
 @deffn {Scheme procedure} pack [datum ...]
@@ -513,8 +513,8 @@ This wrapping can also be used to map @code{ext} objects onto whatever they are
 meant to actually represent in your application.
 
 @deffn {Scheme procedure} unpack-from in
-Unpacks a single datum from the open binary input port @code{in} and returns
-the unpacked object. If the object is a collection this  procedure is called
+Unpacks a single datum from the open binary input port @var{in} and returns the
+unpacked object. If the object is a collection this  procedure is called
 recursively.
 
 If the port is empty, meaning that not a single byte could be read, the
@@ -526,9 +526,9 @@ an array) or another exception if an object could only be read partially.
 @end deffn
 
 @deffn {Scheme procedure} unpack bytes
-Unpacks a all data from the bytevector @code{bytes} and returns the
-unpacked objects (@pxref{Binding Multiple Values,,,guile}). If @code{bytes} is
-empty, no objects will be returned.
+Unpacks a all data from the bytevector @var{bytes} and returns the unpacked
+objects (@pxref{Binding Multiple Values,,,guile}). If @code{bytes} is empty, no
+objects will be returned.
 
 The exceptions raised are the same as for @code{unpack-from}, except that
 @code{empty-port} is never thrown; if the port is empty nothing will get
