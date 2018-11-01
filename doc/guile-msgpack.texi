@@ -41,6 +41,7 @@ actions in GNU Guile.
 @menu
 * MessagePack Guide::  The MessagePack format in general
 * MessagePack API::    Using MessagePack in GNU Guile
+* Procedure Index::
 * GNU Free Documentation License::
 @end menu
 @end ifnottex
@@ -557,6 +558,10 @@ objects
 @end example
 @end deffn
 
+@node Procedure Index
+@appendix Procedure Index
+
+@printindex fn
 
 @node GNU Free Documentation License
 @appendix GNU Free Documentation License
