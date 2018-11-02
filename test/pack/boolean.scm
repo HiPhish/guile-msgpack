@@ -17,8 +17,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with msgpack-guile.  If not, see <http://www.gnu.org/licenses/>.
 
-(use-modules (msgpack pack)
-             (test pack utility test-cases))
+(use-modules (test pack utility test-cases))
 
 
 (test-cases "Boolean"

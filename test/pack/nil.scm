@@ -17,8 +17,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with msgpack-guile.  If not, see <http://www.gnu.org/licenses/>.
 
-(use-modules (msgpack pack)
-             ((msgpack nothing) #:select (nothing))
+(use-modules ((msgpack nothing) #:select (nothing))
              (test pack utility test-cases))
 
 

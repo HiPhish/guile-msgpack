@@ -26,5 +26,5 @@
 (test-cases "8-bit binary strings"
   ((make-bytevector 0 #x01) (#xC4 #x00))
   ((make-bytevector 1 #x01) (#xC4 #x01 #x01))
-  ((make-bytevector 9 #x01) (#xC4 #x09 #x01 #x01 #x01 #x01 #x01 #x01 #x01 #x01 #x01)))
+  ((make-bytevector 9 #x01) (#xC4 #x09 (9 #x01))))
 (test-end "Binary strings")

@@ -17,9 +17,9 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with msgpack-guile.  If not, see <http://www.gnu.org/licenses/>.
 
-(use-modules (msgpack pack)
-             (srfi srfi-64)
-             (test pack utility test-cases))
+(use-modules (srfi srfi-64)
+             (test pack utility test-cases)
+             ((msgpack) #:select (float-precision)))
 
 
 (test-begin "Floating point numbers")

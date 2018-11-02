@@ -17,8 +17,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with msgpack-guile.  If not, see <http://www.gnu.org/licenses/>.
 
-(use-modules (msgpack unpack)
-             (srfi srfi-64)
+(use-modules (srfi srfi-64)
              (test unpack utility test-cases))
 
 
@@ -27,7 +26,7 @@
   ("" (#b10100000))
   ("" (#xD9 #x00))
   ("" (#xDA #x00 #x00))
-  ("" (#xDA #x00 #x00 #x00 #x00)))
+  ("" (#xDB #x00 #x00 #x00 #x00)))
 ;; We test first an ASCII string, then a UTF-8 encoded Unicode string. The
 ;; Unicode text says "Unicode" in Cyrillic; feel free to add more alphabets as
 ;; additional test cases if needed.

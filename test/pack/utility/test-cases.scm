@@ -19,28 +19,54 @@
 
 (define-module (test pack utility test-cases)
   #:use-module ((msgpack pack)     #:select (pack))
+  #:use-module ((srfi srfi-1)      #:select (append-map))
   #:use-module ((srfi srfi-64)     #:select (test-begin test-end test-assert))
   #:use-module ((srfi srfi-28)     #:select (format))
+  #:use-module ((ice-9 match)      #:select (match-lambda))
   #:use-module ((rnrs bytevectors) #:select (u8-list->bytevector bytevector=?))
   #:export (test-cases test-case))
 
+;; Test cases are specified as (test-case given expected), where 'given' is the
+;; bytevector of packed data and 'expected' is a specification of expected
+;; bytes.
+;;
+;; expected ::= (spec ...)
+;; spec     ::= byte
+;;              (count byte ...)
+;;
+;; A single byte is take as the literal byte, a (count byte ...) is taken as
+;; 'count' many repetitions of the following bytes.
+;;
+;; Example: (#x00 #x01 (3 #x02) #(2 #x03 #x04)) is the same as
+;;          (#x00 #x01 #x02 #x02 #x02 #x03 #x04 #x03 #x04)
 
 (define-syntax test-cases
   (syntax-rules ()
     ((_ title
-       (given (byte byte* ...))
-       ...)
+        (given (spec ...))
+        ...)
      (begin
        (test-begin title)
-       (test-case given (byte byte* ...))
+       (test-case given (spec ...))
        ...
        (test-end title)))))
 
 (define-syntax test-case
   (syntax-rules ()
-    ((_ given (byte byte* ...))
+    ((_ given (spec ...))
      (test-bytevector= (pack given)
-                       (u8-list->bytevector '(byte byte* ...))))))
+                       (compact-bytevector (syntax->datum #'(spec ...)))))))
+
+(define (compact-bytevector specs)
+  "Convert a series of of (count byte ...) or single byte specifications into a
+  bytevector."
+  (u8-list->bytevector
+    (append-map (match-lambda
+                  ((count byte ...)
+                   (apply append (make-list count byte)))
+                  (byte
+                   (list byte)))
+                specs)))
 
 (define (test-bytevector= bv1 bv2)
   (define equivalent? (bytevector=? bv1 bv2))

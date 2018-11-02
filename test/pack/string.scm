@@ -17,8 +17,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with msgpack-guile.  If not, see <http://www.gnu.org/licenses/>.
 
-(use-modules (msgpack pack)
-             (srfi srfi-64)
+(use-modules (srfi srfi-64)
              (test pack utility test-cases))
 
 
@@ -43,51 +42,9 @@
 
 (test-cases "16-bit strings"
   ((make-string (expt 2 8) #\x)
-   (#xDA #x01 #x00 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78 #x78
-                   #x78 #x78 #x78 #x78))
+   (#xDA #x01 #x00 (256 #x78)))
   ((make-string (expt 2 7) #\Б)
-   (#xDA #x01 #x00 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91 #xD0 #x91
-                   #xD0 #x91 #xD0 #x91)))
+   (#xDA #x01 #x00 (128 #xD0 #x91))))
 
 ;;; I'm skipping this size because it's too large to handle
 (test-cases "32-bit strings")

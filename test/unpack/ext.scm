@@ -17,8 +17,7 @@
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with msgpack-guile.  If not, see <http://www.gnu.org/licenses/>.
 
-(use-modules (msgpack unpack)
-             (msgpack ext)
+(use-modules ((msgpack ext) #:select (ext))
              (srfi srfi-64)
              (test unpack utility test-cases))
 
