@@ -18,7 +18,6 @@
 ;;; along with msgpack-guile.  If not, see <http://www.gnu.org/licenses/>.
 
 (define-module (msgpack nothing)
-  #:use-module ((srfi srfi-9) #:select (define-record-type))
   #:export (nothing? nothing))
 
 ;;; MessagePack defines a type "nil" for nothingness, but Guile has no
