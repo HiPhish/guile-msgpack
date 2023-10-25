@@ -513,7 +513,7 @@ wrapping the @code{unpack-from} and @code{unpack} procedures like this:
 This wrapping can also be used to map @code{ext} objects onto whatever they are
 meant to actually represent in your application.
 
-@deffn {Scheme procedure} unpack-from in
+@deffn {Scheme procedure} unpack-from in @ [#:string-decoder=utf8->string]
 Unpacks a single datum from the open binary input port @var{in} and returns the
 unpacked object. If the object is a collection this  procedure is called
 recursively.
@@ -524,10 +524,14 @@ exception @code{empty-port} will be thrown.
 If an object could not be read fully an exception will be raised. Either
 @code{unexpected-eof} if an entire object is missing from a collection (such as
 an array) or another exception if an object could only be read partially.
+
+For legacy code where MessagePack strings are not encoded as UTF-8 you can provide
+a custom @code{string-decoder} procedure to decode a bytevector and return the
+intended string type.
 @end deffn
 
-@deffn {Scheme procedure} unpack bytes
-Unpacks a all data from the bytevector @var{bytes} and returns the unpacked
+@deffn {Scheme procedure} unpack bytes @ [#:string-decoder=utf8->string]
+Unpacks all data from the bytevector @var{bytes} and returns the unpacked
 objects (@pxref{Binding Multiple Values,,,guile}). If @code{bytes} is empty, no
 objects will be returned.
 
@@ -556,6 +560,20 @@ one two hello
 objects
 ⇒ (1 2 "hello")
 @end example
+
+@code{string-decoder} is a custom string decoder, same as in @code{unpack-from}.
+
+@example
+;; The UTF-16 string "Юникод" encoded as a MessagePack fixed length string. But the
+;; default is UTF-8
+(unpack #vu8(#b10101100 #x04 #x2E #x04 #x3D #x4 #x38 #x04 #x3A #x04 #x3E #x4 #x34))
+⇒ "\x04.\x04=\x048\x04:\x04>\x044"
+;; Using a custom decoder
+(unpack #vu8(#b10101100 #x04 #x2E #x04 #x3D #x4 #x38 #x04 #x3A #x04 #x3E #x4 #x34)
+        #:string-decoder utf16->string)
+⇒ "Юникод"
+@end example
+
 @end deffn
 
 @node Procedure Index

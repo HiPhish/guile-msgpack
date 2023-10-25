@@ -47,19 +47,22 @@
               #:select (ext)))
 
 ;; ----------------------------------------------------------------------------
-(define (unpack-from in)
+(define* (unpack-from in #:key (string-decoder utf8->string))
   "- Scheme Procedure: unpack-from in
      Unpack (de-serialise) one value from the open binary input port IN.
-     
+
      If the port is empty (not a single byte could be read) an 'empty-port
-     exception will be raised."
+     exception will be raised.
+
+     To decode non UTF-8 strings pass the keyword argument STRING-DECODER,
+     a procedure that decodes a byte vector."
   (define (primitive-unpack)
     "Unpack an object, but do not expand extension objects yet"
     (cond
       ((<= tag #x7F) tag)
       ((<= #x80 tag #x8F) (unpack-map    (logand tag #b00001111) in))
       ((<= #x90 tag #x9F) (unpack-array  (logand tag #b00001111) in))
-      ((<= #xA0 tag #xBF) (unpack-string (logand tag #b00011111) in))
+      ((<= #xA0 tag #xBF) (unpack-string (logand tag #b00011111) in string-decoder))
       ((= tag #xC0) (nothing))
       ((= tag #xC1) (throw 'unpackable "#xC1 cannot be unpacked"))
       ((= tag #xC2) #f)
@@ -85,9 +88,9 @@
       ((= tag #xD6) (unpack-ext  4 in))
       ((= tag #xD7) (unpack-ext  8 in))
       ((= tag #xD8) (unpack-ext 16 in))
-      ((= tag #xD9) (unpack-string (unpack-integer 1 #f in) in))
-      ((= tag #xDA) (unpack-string (unpack-integer 2 #f in) in))
-      ((= tag #xDB) (unpack-string (unpack-integer 4 #f in) in))
+      ((= tag #xD9) (unpack-string (unpack-integer 1 #f in) in string-decoder))
+      ((= tag #xDA) (unpack-string (unpack-integer 2 #f in) in string-decoder))
+      ((= tag #xDB) (unpack-string (unpack-integer 4 #f in) in string-decoder))
       ((= tag #xDC) (unpack-array  (unpack-integer 2 #f in) in))
       ((= tag #xDD) (unpack-array  (unpack-integer 4 #f in) in))
       ((= tag #xDE) (unpack-map    (unpack-integer 2 #f in) in))
@@ -104,7 +107,8 @@
         (-1 (ext->time primitive))
         (_  primitive)))))
 
-(define (unpack bytes)
+
+(define* (unpack bytes #:key (string-decoder utf8->string))
   "- Scheme Procedure: unpack bytes
      Unpack (de-serialise) all values from the bytevector BYTES.
      
@@ -118,10 +122,9 @@
     (catch 'empty-port
       (λ ()
         (while #t
-          (set! objs (cons (unpack-from in) objs))))
+          (set! objs (cons (unpack-from in #:string-decoder string-decoder) objs))))
       (λ (key . args)
         (apply values (reverse! objs))))))
-
 
 ;; ----------------------------------------------------------------------------
 (define (unpack-integer size signed? in)
@@ -168,11 +171,14 @@
       (throw 'unexpected-eof))))
 
 
-(define (unpack-string size in)
-  "- Scheme Procedure: unpack-string size in
-     Unpack a UTF-8 string of length ‘size’ from binary input port ‘in’."
+(define (unpack-string size in string-decoder)
+  "- Scheme Procedure: unpack-string size in proc
+     Unpack a string of length ‘size’ from binary input port ‘in’.
+
+     If PROC is not #f, (‘PROC’ bytevector) is called to decode the string,
+     otherwise it is decoded as UTF-8"
   (define bytes (get-bytevector-n in size))
-  (utf8->string bytes))
+  (string-decoder bytes))
 
 (define (unpack-bytes size in)
   "- Scheme Procedure: unpack-bytes size in
